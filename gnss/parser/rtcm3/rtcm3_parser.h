@@ -28,8 +28,6 @@
 
 #include "gnss/proto/gnss_raw_observation.pb.h"
 
-#include "cyber/cyber.h"
-
 namespace apollo {
 namespace drivers {
 namespace gnss {

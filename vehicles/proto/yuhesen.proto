@@ -1,0 +1,276 @@
+syntax = "proto2";
+
+package apollo.canbus;
+
+enum Gear_targetType {
+  GEAR_TARGET_DISABLE = 0;
+  GEAR_TARGET_PARK = 1;
+  GEAR_TARGET_REVERSE = 2;
+  GEAR_TARGET_NEUTRAL = 3;
+  GEAR_TARGET_DRIVE = 4;
+}
+
+message Ctrl_cmd {
+  optional Gear_targetType gear_target = 1;
+  optional uint32 speed_target = 2;
+  optional int32 steer_angle_target = 3;
+  optional uint8 heartbeat_count = 4;
+}
+
+enum TurnSignalAndHazardLightSwitch {
+  TURN_SIGNAL_AND_HAZARD_LIGHT_SWITCH_OFF = 0; // All off
+  TURN_SIGNAL_AND_HAZARD_LIGHT_SWITCH_LEFT = 1; // Left turn signal on
+  TURN_SIGNAL_AND_HAZARD_LIGHT_SWITCH_RIGHT = 2; // Right turn signal on
+  TURN_SIGNAL_AND_HAZARD_LIGHT_SWITCH_HAZARD = 3; // Hazard lights on (turn signals have higher priority)
+}
+
+message IO_cmd {
+  optional bool io_control_enable;
+  optional TurnSignalAndHazardLightSwitch turn_signal_and_hazard_light_switch;
+  optional bool marker_light_switch;
+  optional bool charging_force_power_on_flag;
+  optional uint8 heartbeat_count = 4;
+}
+
+message Ctrl_fb {
+  // Current vehicle running mode feedback
+  enum VehicleRunningMode {
+    VEHICLE_RUNNING_MODE_AUTO = 0;   // Automatic mode (0x0)
+    VEHICLE_RUNNING_MODE_REMOTE = 1; // Remote control mode (0x1)
+    VEHICLE_RUNNING_MODE_STOP = 2;   // Stop mode (0x2)
+  }
+
+  optional Gear_targetType gear_target = 1;
+  optional uint32 speed = 2;
+  optional int32 steer_angle = 3;
+  VehicleRunningMode current_mode = 2;
+  optional uint8 heartbeat_count = 4;
+}
+
+message Lr_wheel_fb {
+  optional int32 rear_left_wheel_speed = 1;
+  optional int32 rear_left_wheel_pulse_count = 2;
+  optional uint8 heartbeat_count = 3;
+}
+
+message Rr_wheel_fb {
+  optional int32 rear_right_wheel_speed = 1;
+  optional int32 rear_right_wheel_pulse_count = 2;
+  optional uint8 heartbeat_count = 3;
+}
+
+message IO_fb {
+  optional bool io_control_enable;
+  optional TurnSignalAndHazardLightSwitch turn_signal_and_hazard_light_switch;
+  optional bool marker_light_switch;
+  optional bool charging_force_power_on_flag;
+  optional uint8 heartbeat_count = 4;
+}
+
+message Odo_fb {
+  optional int32 odometer = 1;
+}
+
+message Bms_Infor {
+  // Current battery voltage (unit: V)
+  uint32 battery_voltage = 1;
+
+  // Current battery current (unit: A)
+  uint32 battery_current = 2;
+
+  // Current battery remaining capacity (unit: %, or Ah, please specify the unit in the comment)
+  uint32 battery_remaining_capacity = 3;
+
+  optional uint8 heartbeat_count = 4;
+}
+
+message Bms_flag_Infor {
+  uint8 remaining_capacity_percent = 1;
+
+  // Cell over-voltage protection
+  bool cell_over_voltage_protection = 2;
+
+  // Cell under-voltage protection
+  bool cell_under_voltage_protection = 3;
+
+  // Pack over-voltage protection
+  bool pack_over_voltage_protection = 4;
+
+  // Pack under-voltage protection
+  bool pack_under_voltage_protection = 5;
+
+  // Charging over-temperature protection
+  bool charging_over_temperature_protection = 6;
+
+  // Charging under-temperature protection
+  bool charging_under_temperature_protection = 7;
+
+  // Discharging over-temperature protection
+  bool discharging_over_temperature_protection = 8;
+
+  // Discharging under-temperature protection
+  bool discharging_under_temperature_protection = 9;
+
+  // Charging over-current protection
+  bool charging_over_current_protection = 10;
+
+  // Discharging over-current protection
+  bool discharging_over_current_protection = 11;
+
+  // Short-circuit protection
+  bool short_circuit_protection = 12;
+
+  // Front-end detection IC error
+  bool frontend_ic_error = 13;
+
+  // Software lock MOS
+  bool software_mos_lock = 14;
+
+  // Charging status
+  enum ChargingStatus {
+    CHARGING_STATUS_NOT_CHARGING = 0; // Not charging
+    CHARGING_STATUS_MANUAL_CHARGING = 1; // Manual charging
+    CHARGING_STATUS_FRONT_CHARGER_CHARGING = 2; // Front charger charging
+    CHARGING_STATUS_REAR_CHARGER_CHARGING = 3; // Rear charger charging
+  }
+  ChargingStatus charging_status = 15;
+
+  // SOC low alarm (State of Charge)
+  bool soc_low_alarm = 16;
+
+  // Battery low power alarm
+  bool battery_low_power_alarm = 17;
+
+  // Current maximum cell temperature (unit: °C)
+  uint32 max_cell_temperature = 18;
+
+  // Current minimum cell temperature (unit: °C)
+  uint32 min_cell_temperature = 19;
+
+  optional uint8 heartbeat_count = 20;
+}
+
+message Ultrasonic_1_fb {
+  // Ultrasonic sensor 1 distance feedback (unit: m or cm, please specify the unit in the comment)
+  uint32 ultrasonic_sensor_1_distance = 1;
+
+  // Ultrasonic sensor 2 distance feedback (unit: m or cm, please specify the unit in the comment)
+  uint32 ultrasonic_sensor_2_distance = 2;
+
+  // Ultrasonic sensor 3 distance feedback (unit: m or cm, please specify the unit in the comment)
+  uint32 ultrasonic_sensor_3_distance = 3;
+
+  // Ultrasonic sensor 4 distance feedback (unit: m or cm, please specify the unit in the comment)
+  uint32 ultrasonic_sensor_4_distance = 4;
+
+  optional uint8 heartbeat_count = 5;
+}
+
+message Ultrasonic_2_fb {
+  // Ultrasonic sensor 1 distance feedback (unit: m or cm, please specify the unit in the comment)
+  uint32 ultrasonic_sensor_5_distance = 1;
+
+  // Ultrasonic sensor 2 distance feedback (unit: m or cm, please specify the unit in the comment)
+  uint32 ultrasonic_sensor_6_distance = 2;
+
+  // Ultrasonic sensor 3 distance feedback (unit: m or cm, please specify the unit in the comment)
+  uint32 ultrasonic_sensor_7_distance = 3;
+
+  // Ultrasonic sensor 4 distance feedback (unit: m or cm, please specify the unit in the comment)
+  uint32 ultrasonic_sensor_8_distance = 4;
+
+  optional uint8 heartbeat_count = 5;
+}
+
+message Veh_fb_diag {
+  // Vehicle fault level
+  enum VehicleFaultLevel {
+    VEHICLE_FAULT_LEVEL_NO_FAULT = 0;   // No fault
+    VEHICLE_FAULT_LEVEL_LEVEL_1 = 1;  // Level 1 fault
+    VEHICLE_FAULT_LEVEL_LEVEL_2 = 2;  // Level 2 fault
+    VEHICLE_FAULT_LEVEL_LEVEL_3 = 3;  // Level 3 fault
+  }
+  VehicleFaultLevel vehicle_fault_level = 1;
+
+  // Auto control CAN communication error
+  bool auto_control_can_communication_error = 2;
+
+  // Auto IO control CAN communication error
+  bool auto_io_control_can_communication_error = 3;
+
+  // EPS offline fault
+  bool eps_offline_fault = 4;
+
+  // EPS fault
+  bool eps_general_fault = 5;
+
+  // EPS MOSFET over-temperature
+  bool eps_mosfet_over_temperature = 6;
+
+  // EPS alarm fault
+  bool eps_alarm_fault = 7;
+
+  // EPS operation fault
+  bool eps_operation_fault = 8;
+
+  // EPS over-current fault
+  bool eps_over_current_fault = 9;
+
+  // Left wheel motor driver fault
+  enum MotorDriverFault {
+    MOTOR_DRIVER_FAULT_NO_FAULT = 0; // No fault in motor driver
+    MOTOR_DRIVER_FAULT_ENCODER_ABZ_ALARM = 1; // Encoder ABZ alarm
+    MOTOR_DRIVER_FAULT_ENCODER_UVW_ALARM = 2; // Encoder UVW alarm
+    MOTOR_DRIVER_FAULT_POSITION_DEVIATION = 3; // Position deviation
+    MOTOR_DRIVER_FAULT_STALL = 4; // Stall
+    MOTOR_DRIVER_FAULT_ADC_ZERO_ABNORMAL = 5; // ADC zero abnormal
+    MOTOR_DRIVER_FAULT_OVERLOAD = 6; // Overload
+    MOTOR_DRIVER_FAULT_POWER_UNDER_VOLTAGE = 7; // Power under-voltage
+    MOTOR_DRIVER_FAULT_POWER_OVER_VOLTAGE = 8; // Power over-voltage
+    MOTOR_DRIVER_FAULT_OVER_CURRENT = 9; // Over-current
+    MOTOR_DRIVER_FAULT_INSTANTANEOUS_DISCHARGE_ALARM = 10; // Instantaneous discharge alarm
+    MOTOR_DRIVER_FAULT_AVERAGE_DISCHARGE_ALARM = 11; // Average discharge alarm
+    MOTOR_DRIVER_FAULT_PARAMETER_RW_ABNORMAL = 12; // Parameter read/write abnormal
+    MOTOR_DRIVER_FAULT_INPUT_PORT_REDEFINITION = 13; // Input port redefinition
+    MOTOR_DRIVER_FAULT_DISCONNECT_PROTECTION = 14; // Disconnect protection
+    MOTOR_DRIVER_FAULT_MOTOR_OVER_TEMPERATURE = 15; // Motor over-temperature alarm
+    MOTOR_DRIVER_FAULT_MOTOR_TEMP_CTRL_DISCONNECT = 16; // Motor temperature control disconnect alarm
+    MOTOR_DRIVER_FAULT_COOPERATIVE_MODE_ALARM = 17; // Cooperative mode alarm
+    MOTOR_DRIVER_FAULT_DRIVER_OVER_TEMPERATURE = 18; // Driver over-temperature alarm
+    MOTOR_DRIVER_FAULT_DRIVER_CAN_COMM_DISCONNECT = 19; // Motor driver CAN communication signal disconnect
+  }
+  MotorDriverFault left_wheel_motor_driver_fault = 10;
+
+  // Right wheel motor driver fault (using the same MotorDriverFault enum)
+  MotorDriverFault right_wheel_motor_driver_fault = 11;
+
+  // BMS CAN communication offline fault
+  bool bms_can_communication_offline = 12;
+
+  // Emergency stop fault
+  bool emergency_stop_fault = 13;
+
+  // Remote controller off warning
+  bool remote_controller_off_warning = 14;
+
+  // Remote receiver offline fault
+  bool remote_receiver_offline_fault = 15;
+
+  optional uint8 heartbeat_count = 16;
+}
+
+message Yuhesen {
+  optional Ctrl_cmd ctrl_cmd = 1; // control message
+  optional IO_cmd io_cmd = 2; // control message
+
+  optional Ctrl_fb ctrl_fb = 10; // report message
+  optional Lr_wheel_fb lr_wheel_fb = 11; // report message
+  optional Rr_wheel_fb rr_wheel_fb = 12; // report message
+  optional IO_fb io_fb = 13; // report message
+  optional Odo_fb odo_fb = 14; // report message
+  optional Bms_Infor bms_infor = 15; // report message
+  optional Bms_flag_Infor bms_flag_infor = 16; // report message
+  optional Ultrasonic_1_fb ultrasonic_1_fb = 17;
+  optional Ultrasonic_2_fb ultrasonic_2_fb = 18;
+  optional Veh_fb_diag veh_fb_diag = 19;
+}

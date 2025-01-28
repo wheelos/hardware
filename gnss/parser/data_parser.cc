@@ -122,15 +122,12 @@ void DataParser::ParseRawData(const std::string &msg) {
   }
 
   data_parser_->Update(msg);
-  Parser::MessageType type;
-  MessagePtr msg_ptr;
 
-  while (cyber::OK()) {
-    type = data_parser_->GetMessage(&msg_ptr);
-    if (type == Parser::MessageType::NONE) {
-      break;
-    }
-    DispatchMessage(type, msg_ptr);
+  std::vector<Parser::Message> messages;
+  data_parser_->GetMessages(&messages);
+
+  for (const auto &[msg_type, msg_ptr] : messages) {
+    DispatchMessage(msg_type, msg_ptr);
   }
 }
 

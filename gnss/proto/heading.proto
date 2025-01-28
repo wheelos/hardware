@@ -22,7 +22,7 @@ message Heading {
   optional bytes station_id = 11;
 
   optional uint32 satellite_tracked_number = 12;
-  optional uint32 satellite_soulution_number = 13;
+  optional uint32 satellite_solution_number = 13;
   optional uint32 satellite_number_obs =
       14;  // Number of satellites above the elevation mask angle
   optional uint32 satellite_number_multi =

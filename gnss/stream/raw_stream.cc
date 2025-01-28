@@ -484,10 +484,6 @@ void RawStream::DataSpin() {
     size_t length = data_stream_->read(buffer_, BUFFER_SIZE);
     if (length > 0) {
       std::shared_ptr<RawData> msg_pub = std::make_shared<RawData>();
-      if (!msg_pub) {
-        AERROR << "New data sting msg failed.";
-        continue;
-      }
       msg_pub->set_data(reinterpret_cast<const char *>(buffer_), length);
       raw_writer_->Write(msg_pub);
       data_parser_ptr_->ParseRawData(msg_pub->data());
@@ -525,7 +521,6 @@ void RawStream::RtkSpin() {
 
 void RawStream::PublishRtkData(const size_t length) {
   std::shared_ptr<RawData> rtk_msg = std::make_shared<RawData>();
-  CHECK_NOTNULL(rtk_msg);
   rtk_msg->set_data(reinterpret_cast<const char *>(buffer_rtk_), length);
   rtcm_writer_->Write(rtk_msg);
   rtcm_parser_ptr_->ParseRtcmData(rtk_msg->data());

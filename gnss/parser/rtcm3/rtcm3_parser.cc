@@ -14,7 +14,7 @@
  * limitations under the License.
  *****************************************************************************/
 
-#include "gnss/parser/rtcm3_parser.h"
+#include "gnss/parser/rtcm3/rtcm3_parser.h"
 
 #include <utility>
 

@@ -153,6 +153,10 @@ class VehicleController {
 
   virtual void SetLimits() {}
 
+  virtual void SetSpeed(double speed) {}
+
+  virtual void SetAngularSpeed(double angular_speed) {}
+
  protected:
   virtual Chassis::DrivingMode driving_mode();
   virtual void set_driving_mode(const Chassis::DrivingMode &driving_mode);

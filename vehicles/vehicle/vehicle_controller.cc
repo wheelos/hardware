@@ -131,6 +131,10 @@ ErrorCode VehicleController::Update(const ControlCommand &control_command) {
     Brake(control_command.brake());
     SetEpbBreak(control_command);
     SetLimits();
+
+    // The ROS chassis receives speed commands, while the Ackerman chassis
+    // receives throttle or acceleration commands.
+    SetSpeed(control_command.speed());
   }
 
   if (driving_mode() == Chassis::COMPLETE_AUTO_DRIVE ||
@@ -141,6 +145,10 @@ ErrorCode VehicleController::Update(const ControlCommand &control_command) {
     } else {
       Steer(control_command.steering_target());
     }
+
+    // The ROS chassis receives angular velocity, while the Ackerman chassis
+    // receives steering wheel angle.
+    SetAngularSpeed(control_command.steering_rate());
   }
 
   if ((driving_mode() == Chassis::COMPLETE_AUTO_DRIVE ||

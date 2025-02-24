@@ -69,12 +69,12 @@ void TwistCmd::set_y_target_speed(uint8_t* data, uint32_t y_target_speed) {
 
   std::uint8_t t = 0;
   t = static_cast<uint8_t>(y & 0xFF);
-  Byte frame_low(data + 0);
+  Byte frame_low(data + 2);
   frame_low.set_value(t, 0, 8);
 
   y >>= 8;
   t = static_cast<uint8_t>(y & 0xFF);
-  Byte frame_high(data + 1);
+  Byte frame_high(data + 3);
   frame_high.set_value(t, 0, 8);
 }
 
@@ -83,16 +83,18 @@ void TwistCmd::set_angular_velocity_z(uint8_t* data, int angular_velocity_z) {
 
   std::uint8_t t = 0;
   t = static_cast<uint8_t>(z & 0xFF);
-  Byte frame_low(data + 0);
+  Byte frame_low(data + 4);
   frame_low.set_value(t, 0, 8);
 
   z >>= 8;
   t = static_cast<uint8_t>(z & 0xFF);
-  Byte frame_high(data + 1);
+  Byte frame_high(data + 5);
   frame_high.set_value(t, 0, 8);
 }
 
-void TwistCmd::set_checksum(uint8_t* data, int checksum) {}
+void TwistCmd::set_checksum(uint8_t* data, int checksum) {
+  // TODO(zero): need to implement
+}
 
 }  // namespace ros
 }  // namespace canbus

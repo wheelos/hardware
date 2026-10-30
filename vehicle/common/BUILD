@@ -1,0 +1,18 @@
+load("@hardware.build//tools:cpplint.bzl", "cpplint")
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = "canbus_common",
+    srcs = ["canbus_gflags.cc"],
+    hdrs = ["canbus_gflags.h"],
+    copts = ["-DMODULE_NAME=\\\"canbus\\\""],
+    include_prefix = "modules/canbus/common",
+    strip_include_prefix = "/common",
+    deps = [
+        "@com_github_gflags_gflags//:gflags",
+    ],
+)
+
+cpplint()

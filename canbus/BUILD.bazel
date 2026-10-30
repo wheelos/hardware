@@ -1,0 +1,63 @@
+load("@hardware.build//tools:cpplint.bzl", "cpplint")
+load("@hardware.build//tools/install:install.bzl", "install")
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files(["CPPLINT.cfg"])
+
+alias(
+    name = "client",
+    actual = "//can_client",
+)
+
+alias(
+    name = "factory",
+    actual = "//can_client:can_client_factory",
+)
+
+alias(
+    name = "tool",
+    actual = "//can_client:can_client_tool",
+)
+
+install(
+    name = "install",
+    library_dest = "drivers/lib",
+    targets = [
+        ":sensor_gflags",
+        ":sensor_canbus_lib",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "sensor_gflags",
+    srcs = ["sensor_gflags.cc"],
+    hdrs = ["sensor_gflags.h"],
+    include_prefix = "modules/drivers/canbus",
+    strip_include_prefix = "/",
+    deps = [
+        "@com_github_gflags_gflags//:gflags",
+    ],
+    alwayslink = True,
+)
+
+cc_library(
+    name = "sensor_canbus_lib",
+    hdrs = ["sensor_canbus.h"],
+    include_prefix = "modules/drivers/canbus",
+    strip_include_prefix = "/",
+    deps = [
+        ":sensor_gflags",
+        "//can_client:can_client_factory",
+        "//can_comm:can_receiver",
+        "//can_comm:can_sender",
+        "//can_comm:message_manager_base",
+        "//proto:sensor_canbus_conf_cc_proto",
+        "@wheelos_common//modules/common/monitor_log",
+    ],
+    alwayslink = True,
+)
+
+cpplint()

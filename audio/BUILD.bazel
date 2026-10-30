@@ -1,0 +1,110 @@
+load("@hardware.build//tools:cpplint.bzl", "cpplint")
+load("@hardware.build//tools/install:install.bzl", "install")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files(["CPPLINT.cfg"])
+
+alias(
+    name = "component",
+    actual = "//:libmicrophone_component.so",
+)
+
+MICROPHONE_COPTS = ['-DMODULE_NAME=\\"microphone\\"']
+
+cc_binary(
+    name = "libmicrophone_component.so",
+    linkshared = True,
+    linkstatic = False,
+    deps = [
+        ":microphone_component_lib",
+    ],
+)
+
+install(
+    name = "install",
+    data = [
+        ":runtime_data",
+    ],
+    data_dest = "drivers/addition_data/microphone",
+    library_dest = "drivers/lib/microphone",
+    targets = [
+        ":libmicrophone_component.so",
+    ],
+    deps = [":install_lib_top_level"],
+)
+
+install(
+    name = "install_lib_top_level",
+    library_dest = "drivers/lib",
+    targets = [
+        ":libmicrophone_component.so",
+    ],
+)
+
+filegroup(
+    name = "runtime_data",
+    srcs = glob([
+        "conf/*.txt",
+        "dag/*.dag",
+        "launch/*.launch",
+    ]),
+)
+
+cc_library(
+    name = "microphone_component_lib",
+    srcs = ["microphone_component.cc"],
+    hdrs = ["microphone_component.h"],
+    copts = MICROPHONE_COPTS,
+    include_prefix = "modules/drivers/microphone",
+    strip_include_prefix = "/",
+    deps = [
+        ":audio_assembler",
+        "//:respeaker",
+        "//proto:audio_cc_proto",
+        "//proto:microphone_config_cc_proto",
+        "@core//cyber",
+        "@wheelos_common//modules/common/util:util_tool",
+    ],
+    alwayslink = True,
+)
+
+cc_library(
+    name = "respeaker",
+    srcs = ["respeaker.cc"],
+    hdrs = ["respeaker.h"],
+    copts = MICROPHONE_COPTS,
+    include_prefix = "modules/drivers/microphone",
+    strip_include_prefix = "/",
+    deps = [
+        "//proto:microphone_config_cc_proto",
+        "@core//cyber",
+        "@portaudio",
+    ],
+)
+
+cc_library(
+    name = "audio_assembler",
+    srcs = ["audio_assembler.cc"],
+    hdrs = ["audio_assembler.h"],
+    include_prefix = "modules/drivers/microphone",
+    strip_include_prefix = "/",
+    deps = [
+        "//proto:audio_cc_proto",
+        "//proto:microphone_config_cc_proto",
+        "@core//cyber",
+    ],
+)
+
+cc_test(
+    name = "audio_assembler_test",
+    size = "small",
+    srcs = ["audio_assembler_test.cc"],
+    deps = [
+        ":audio_assembler",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cpplint()

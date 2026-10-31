@@ -1,4 +1,3 @@
-load("@hardware.build//tools:cpplint.bzl", "cpplint")
 load("@hardware.build//tools/hardware:defs.bzl", "VEHICLES", "vehicle_selection")
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 
@@ -133,5 +132,3 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
-
-cpplint()

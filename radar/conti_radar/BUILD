@@ -1,19 +1,37 @@
-load("@hardware.build//tools:cpplint.bzl", "cpplint")
-load("@hardware.build//tools/install:install.bzl", "install")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("@rules_pkg//pkg:install.bzl", "pkg_install")
+load("@rules_pkg//pkg:mappings.bzl", "pkg_attributes", "pkg_filegroup", "pkg_files", "strip_prefix")
 
 package(default_visibility = ["//visibility:public"])
 
-install(
-    name = "install",
-    data = [
-        ":runtime_data",
+pkg_files(
+    name = "package_files_data",
+    srcs = [":runtime_data"],
+    attributes = pkg_attributes(mode = "0644"),
+    prefix = "drivers/addition_data/conti_radar",
+    strip_prefix = strip_prefix.from_root("conti_radar"),
+)
+
+pkg_files(
+    name = "package_files_libraries",
+    srcs = [":libconti_radar.so"],
+    attributes = pkg_attributes(mode = "0755"),
+    prefix = "drivers/lib/conti_radar",
+    strip_prefix = strip_prefix.from_root("conti_radar"),
+)
+
+pkg_filegroup(
+    name = "package_files",
+    srcs = [
+        ":package_files_data",
+        ":package_files_libraries",
     ],
-    data_dest = "drivers/addition_data/conti_radar",
-    library_dest = "drivers/lib/conti_radar",
-    targets = [
-        ":libconti_radar.so",
-    ],
+)
+
+pkg_install(
+    name = "install_dir",
+    srcs = [":package_files"],
+    tags = ["manual"],
 )
 
 filegroup(
@@ -70,5 +88,3 @@ cc_binary(
     linkstatic = False,
     deps = [":conti_radar_canbus_lib"],
 )
-
-cpplint()

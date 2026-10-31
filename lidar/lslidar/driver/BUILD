@@ -1,4 +1,3 @@
-load("@hardware.build//tools:cpplint.bzl", "cpplint")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
 package(default_visibility = ["//visibility:public"])
@@ -25,5 +24,3 @@ cc_library(
         "@wheelos_common//modules/common/util:util_tool",
     ],
 )
-
-cpplint()

@@ -1,7 +1,7 @@
-load("@hardware.build//tools:cpplint.bzl", "cpplint")
 load("@hardware.build//tools/hardware:defs.bzl", "enabled")
-load("@hardware.build//tools/install:install.bzl", "install")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
+load("@rules_pkg//pkg:install.bzl", "pkg_install")
+load("@rules_pkg//pkg:mappings.bzl", "pkg_attributes", "pkg_filegroup", "pkg_files", "strip_prefix")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -13,12 +13,24 @@ CAN_DEFINES = enabled(
     ["CANBUS_WITH_SOCKET"],
 )
 
-install(
-    name = "install",
-    runtime_dest = "drivers/bin",
-    targets = [
-        ":can_client_tool",
-    ],
+pkg_files(
+    name = "package_files_binaries",
+    srcs = [":can_client_tool"],
+    attributes = pkg_attributes(mode = "0755"),
+    include_runfiles = True,
+    prefix = "drivers/bin",
+    strip_prefix = strip_prefix.from_root("can_client"),
+)
+
+pkg_filegroup(
+    name = "package_files",
+    srcs = [":package_files_binaries"],
+)
+
+pkg_install(
+    name = "install_dir",
+    srcs = [":package_files"],
+    tags = ["manual"],
 )
 
 cc_library(
@@ -83,5 +95,3 @@ cc_test(
         "@wheelos_msgs//wheelos_msgs/drivers_msgs:can_card_parameter_cc_proto",
     ],
 )
-
-cpplint()

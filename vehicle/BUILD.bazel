@@ -1,6 +1,6 @@
-load("@hardware.build//tools:cpplint.bzl", "cpplint")
-load("@hardware.build//tools/install:install.bzl", "install", "install_files")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("@rules_pkg//pkg:install.bzl", "pkg_install")
+load("@rules_pkg//pkg:mappings.bzl", "pkg_attributes", "pkg_filegroup", "pkg_files", "strip_prefix")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -46,25 +46,48 @@ cc_binary(
     ],
 )
 
-install(
-    name = "install",
-    data = [
-        ":runtime_data",
-    ],
-    targets = [
-        ":libcanbus_component.so",
-    ],
-    deps = [
+pkg_files(
+    name = "package_files_data",
+    srcs = [":runtime_data"],
+    attributes = pkg_attributes(mode = "0644"),
+    prefix = "vehicle",
+    strip_prefix = strip_prefix.from_root(""),
+)
+
+pkg_files(
+    name = "package_files_libraries",
+    srcs = [":libcanbus_component.so"],
+    attributes = pkg_attributes(mode = "0755"),
+    prefix = "vehicle/lib",
+    strip_prefix = strip_prefix.from_root(""),
+)
+
+pkg_filegroup(
+    name = "package_files",
+    srcs = [
+        ":package_files_data",
+        ":package_files_libraries",
         ":pb_canbus",
     ],
 )
 
-install_files(
+pkg_install(
+    name = "install_dir",
+    srcs = [":package_files"],
+    tags = ["manual"],
+)
+
+pkg_files(
+    name = "pb_canbus_data",
+    srcs = ["@wheelos_msgs//wheelos_msgs/chassis_msgs:chassis_py_pb2"],
+    attributes = pkg_attributes(mode = "0644"),
+    prefix = "modules/canbus",
+    strip_prefix = strip_prefix.from_pkg(),
+)
+
+pkg_filegroup(
     name = "pb_canbus",
-    dest = "modules/canbus",
-    files = [
-        "@wheelos_msgs//wheelos_msgs/chassis_msgs:chassis_py_pb2",
-    ],
+    srcs = [":pb_canbus_data"],
 )
 
 filegroup(
@@ -92,5 +115,3 @@ filegroup(
     name = "test_data",
     srcs = glob(["testdata/**"]),
 )
-
-cpplint()

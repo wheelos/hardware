@@ -74,12 +74,19 @@ The product separately maps built files back to stable DAG/deployment paths;
 source layout and runtime bundle layout are distinct contracts.
 
 `build/` replaces the ambiguous `common/` directory. It is intentionally a
-Starlark-only support module: it owns shared settings, platform constraints,
-lint helpers and the legacy installation rules/templates/provider. It has no
+Starlark-only support module: it owns shared settings and platform constraints.
+It has no
 dependency on transform, any functional hardware module, or the product.
-Transform and hardware consumers use the same canonical `InstallInfo` provider;
-the product and transform retain thin installation-rule re-exports.
 Camera-only consumers therefore do not resolve `wheelos_transform`.
+
+The product's runtime installation uses Bazel-maintained `rules_pkg`:
+`pkg_install` installs a directory explicitly and `pkg_tar` produces an archive.
+Modules declare `pkg_files`/`pkg_filegroup` mappings and explicit `install_dir`
+targets directly from `rules_pkg`. The legacy `install()` interface, custom
+provider, templates and forwarding layers have been removed. Runtime dependency
+collection belongs to product runtime assembly, not module SDK file mappings.
+C++ lint is an explicit command/review operation, not a Bazel build target;
+consumers retain their own lint configuration.
 
 The repository is a WheelOS/Cyber hardware-integration and device-protocol
 library, not a middleware-independent HAL or a complete driving product.
@@ -98,7 +105,7 @@ Profiles use one shared settings identity under
 `@hardware.build//tools/hardware`; helpers anchor labels to their defining
 module, not the calling BUILD's repository. Product runtime layout and binary
 packaging remain in Apollo-Lite `//tools/hardware`. Building its `:hardware`
-target does not package or install; `:install` archives the same runtime.
+target does not package or install; `:package` archives the same runtime.
 
 Source is maintained at `git@github.com:wheelos/hardware.git`.
 Local development uses the product's `.bazelrc.dev` with one override per

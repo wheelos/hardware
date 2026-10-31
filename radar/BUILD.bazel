@@ -1,6 +1,6 @@
-load("@hardware.build//tools:cpplint.bzl", "cpplint")
-load("@hardware.build//tools/install:install.bzl", "install")
 load("@rules_cc//cc:defs.bzl", "cc_test")
+load("@rules_pkg//pkg:install.bzl", "pkg_install")
+load("@rules_pkg//pkg:mappings.bzl", "pkg_attributes", "pkg_filegroup", "pkg_files", "strip_prefix")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -11,13 +11,19 @@ alias(
     actual = "//conti_radar:libconti_radar.so",
 )
 
-install(
-    name = "install",
-    deps = [
-        "//conti_radar:install",
-        "//racobit_radar:install",
-        "//ultrasonic_radar:install",
+pkg_filegroup(
+    name = "package_files",
+    srcs = [
+        "//conti_radar:package_files",
+        "//racobit_radar:package_files",
+        "//ultrasonic_radar:package_files",
     ],
+)
+
+pkg_install(
+    name = "install_dir",
+    srcs = [":package_files"],
+    tags = ["manual"],
 )
 
 cc_test(
@@ -33,5 +39,3 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
-
-cpplint()

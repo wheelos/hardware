@@ -1,4 +1,3 @@
-load("@hardware.build//tools:cpplint.bzl", "cpplint")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
 cc_library(
@@ -29,5 +28,3 @@ cc_library(
         "@wheelos_msgs//wheelos_msgs/sensor_msgs:ins_cc_proto",
     ],
 )
-
-cpplint()

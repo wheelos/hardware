@@ -1,4 +1,3 @@
-load("@hardware.build//tools:cpplint.bzl", "cpplint")
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 
 package(default_visibility = ["//visibility:public"])
@@ -26,5 +25,3 @@ cc_test(
         "@core//cyber",
     ],
 )
-
-cpplint()

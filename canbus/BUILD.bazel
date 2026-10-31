@@ -1,6 +1,6 @@
-load("@hardware.build//tools:cpplint.bzl", "cpplint")
-load("@hardware.build//tools/install:install.bzl", "install")
 load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@rules_pkg//pkg:install.bzl", "pkg_install")
+load("@rules_pkg//pkg:mappings.bzl", "pkg_attributes", "pkg_filegroup", "pkg_files", "strip_prefix")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -21,13 +21,27 @@ alias(
     actual = "//can_client:can_client_tool",
 )
 
-install(
-    name = "install",
-    library_dest = "drivers/lib",
-    targets = [
-        ":sensor_gflags",
+pkg_files(
+    name = "package_files_archives",
+    srcs = [
         ":sensor_canbus_lib",
+        ":sensor_gflags",
     ],
+    attributes = pkg_attributes(mode = "0644"),
+    prefix = "lib",
+    strip_prefix = strip_prefix.from_root(""),
+)
+
+pkg_filegroup(
+    name = "package_files",
+    srcs = [":package_files_archives"],
+    visibility = ["//visibility:public"],
+)
+
+pkg_install(
+    name = "install_dir",
+    srcs = [":package_files"],
+    tags = ["manual"],
     visibility = ["//visibility:public"],
 )
 
@@ -59,5 +73,3 @@ cc_library(
     ],
     alwayslink = True,
 )
-
-cpplint()

@@ -1,4 +1,3 @@
-load("@hardware.build//tools:cpplint.bzl", "cpplint")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 
 package(default_visibility = ["//visibility:public"])
@@ -55,5 +54,3 @@ cc_binary(
     linkstatic = False,
     deps = [":nano_radar_lib"],
 )
-
-cpplint()

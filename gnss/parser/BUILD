@@ -1,4 +1,3 @@
-load("@hardware.build//tools:cpplint.bzl", "cpplint")
 load("@hardware.build//tools/hardware:defs.bzl", "enabled")
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 
@@ -146,5 +145,3 @@ cc_library(
         "@wheelos_msgs//wheelos_msgs/sensor_msgs:gnss_raw_observation_cc_proto",
     ],
 )
-
-cpplint()

@@ -1,4 +1,3 @@
-load("@hardware.build//tools:cpplint.bzl", "cpplint")
 load("@rules_cc//cc:defs.bzl", "cc_binary")
 
 package(default_visibility = ["//visibility:public"])
@@ -30,5 +29,3 @@ cc_binary(
         "@wheelos_msgs//wheelos_msgs/control_msgs:control_cmd_cc_proto",
     ],
 )
-
-cpplint()

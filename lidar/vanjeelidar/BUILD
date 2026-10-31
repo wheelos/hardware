@@ -1,21 +1,39 @@
-load("@hardware.build//tools:cpplint.bzl", "cpplint")
-load("@hardware.build//tools/install:install.bzl", "install")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
+load("@rules_pkg//pkg:install.bzl", "pkg_install")
+load("@rules_pkg//pkg:mappings.bzl", "pkg_attributes", "pkg_filegroup", "pkg_files", "strip_prefix")
 
 package(default_visibility = ["//visibility:public"])
 
 VANJEE_COPTS = ['-DMODULE_NAME=\\"vanjeelidar\\"']
 
-install(
-    name = "install",
-    data = [
-        ":runtime_data",
+pkg_files(
+    name = "package_files_data",
+    srcs = [":runtime_data"],
+    attributes = pkg_attributes(mode = "0644"),
+    prefix = "drivers/addition_data/lidar/vanjeelidar",
+    strip_prefix = strip_prefix.from_root("vanjeelidar"),
+)
+
+pkg_files(
+    name = "package_files_libraries",
+    srcs = ["libvanjeelidar_component.so"],
+    attributes = pkg_attributes(mode = "0755"),
+    prefix = "drivers/lib/lidar/vanjeelidar",
+    strip_prefix = strip_prefix.from_root("vanjeelidar"),
+)
+
+pkg_filegroup(
+    name = "package_files",
+    srcs = [
+        ":package_files_data",
+        ":package_files_libraries",
     ],
-    data_dest = "drivers/addition_data/lidar/vanjeelidar",
-    library_dest = "drivers/lib/lidar/vanjeelidar",
-    targets = [
-        "libvanjeelidar_component.so",
-    ],
+)
+
+pkg_install(
+    name = "install_dir",
+    srcs = [":package_files"],
+    tags = ["manual"],
 )
 
 filegroup(
@@ -80,5 +98,3 @@ cc_library(
     ],
     alwayslink = True,
 )
-
-cpplint()

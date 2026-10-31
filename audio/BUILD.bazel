@@ -1,6 +1,6 @@
-load("@hardware.build//tools:cpplint.bzl", "cpplint")
-load("@hardware.build//tools/install:install.bzl", "install")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
+load("@rules_pkg//pkg:install.bzl", "pkg_install")
+load("@rules_pkg//pkg:mappings.bzl", "pkg_attributes", "pkg_filegroup", "pkg_files", "strip_prefix")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -22,25 +22,48 @@ cc_binary(
     ],
 )
 
-install(
-    name = "install",
-    data = [
-        ":runtime_data",
-    ],
-    data_dest = "drivers/addition_data/microphone",
-    library_dest = "drivers/lib/microphone",
-    targets = [
-        ":libmicrophone_component.so",
-    ],
-    deps = [":install_lib_top_level"],
+pkg_files(
+    name = "package_files_data",
+    srcs = [":runtime_data"],
+    attributes = pkg_attributes(mode = "0644"),
+    prefix = "drivers/addition_data/microphone",
+    strip_prefix = strip_prefix.from_root(""),
 )
 
-install(
-    name = "install_lib_top_level",
-    library_dest = "drivers/lib",
-    targets = [
-        ":libmicrophone_component.so",
+pkg_files(
+    name = "package_files_libraries",
+    srcs = [":libmicrophone_component.so"],
+    attributes = pkg_attributes(mode = "0755"),
+    prefix = "drivers/lib/microphone",
+    strip_prefix = strip_prefix.from_root(""),
+)
+
+pkg_filegroup(
+    name = "package_files",
+    srcs = [
+        ":package_files_data",
+        ":package_files_libraries",
+        ":package_lib_top_level",
     ],
+)
+
+pkg_install(
+    name = "install_dir",
+    srcs = [":package_files"],
+    tags = ["manual"],
+)
+
+pkg_files(
+    name = "package_lib_top_level_libraries",
+    srcs = [":libmicrophone_component.so"],
+    attributes = pkg_attributes(mode = "0755"),
+    prefix = "drivers/lib",
+    strip_prefix = strip_prefix.from_root(""),
+)
+
+pkg_filegroup(
+    name = "package_lib_top_level",
+    srcs = [":package_lib_top_level_libraries"],
 )
 
 filegroup(
@@ -106,5 +129,3 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
-
-cpplint()

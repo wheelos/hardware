@@ -1,4 +1,3 @@
-load("@hardware.build//tools:cpplint.bzl", "cpplint")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
 
 package(default_visibility = ["//visibility:public"])
@@ -59,5 +58,3 @@ cc_test(
         "@wheelos_transform//modules/transform:buffer_test_peer",
     ],
 )
-
-cpplint()

@@ -35,7 +35,7 @@ filegroup(
     srcs = glob([
         "conf/*.txt",
         "dag/*.dag",
-        "launch/*.launch",
+        "launch/camera.launch",
     ]),
 )
 

@@ -1,5 +1,5 @@
 module_config {
-    module_library : "/apollo/bazel-bin/modules/drivers/radar/yg_radar/libyg_radar_component.so"
+    module_library : "lib/components/hardware/libyg_radar_component.so"
     timer_components {
         class_name : "YgRadarComponent"
         config {

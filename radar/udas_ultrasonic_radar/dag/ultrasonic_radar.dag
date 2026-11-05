@@ -1,5 +1,5 @@
 module_config {
-    module_library: "/apollo/bazel-bin/modules/drivers/radar/udas_ultrasonic_radar/libudas_ultrasonic_radar_component.so"
+    module_library: "lib/components/hardware/libudas_ultrasonic_radar_component.so"
     timer_components {
         class_name: "UdasUltrasonicRadarComponent"
         config {

@@ -1,5 +1,5 @@
 module_config {
-    module_library : "/apollo/bazel-bin/modules/drivers/lidar/processor/liblidar_unified_component.so"
+    module_library : "lib/components/hardware/liblidar_unified_component.so"
     components {
       class_name : "LidarUnifiedComponent"
       config {

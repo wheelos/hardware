@@ -42,6 +42,7 @@ cc_library(
     include_prefix = "modules/drivers/gnss/parser",
     strip_include_prefix = "/parser",
     deps = [
+        "//third_party/rtklib",
         "@wheelos_msgs//wheelos_msgs/sensor_msgs:gnss_raw_observation_cc_proto",
     ],
 )

@@ -1,5 +1,5 @@
 module_config {
-    module_library : "/apollo/bazel-bin/modules/drivers/lidar/seyond/libseyond_component.so"
+    module_library : "lib/components/hardware/libseyond_component.so"
     components {
         class_name : "SeyondComponent"
         config {

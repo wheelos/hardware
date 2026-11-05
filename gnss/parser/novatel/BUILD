@@ -36,9 +36,11 @@ cc_test(
     name = "novatel_parser_test",
     size = "small",
     srcs = ["novatel_parser_test.cc"],
-    data = ["//:test_data_files"],
+    data = ["//:test_data/novatel.bin"],
+    env = {"NOVATEL_TEST_CAPTURE": "$(rlocationpath //:test_data/novatel.bin)"},
     deps = [
         ":novatel_parser",
+        "@bazel_tools//tools/cpp/runfiles",
         "@com_google_googletest//:gtest_main",
     ],
 )

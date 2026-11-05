@@ -15,6 +15,7 @@ cc_library(
         "rtkcmn.c",
     ],
     hdrs = ["rtklib.h"],
+    copts = ["-Dcrc32=rtk_crc32"],
     linkstatic = True,
     alwayslink = True,
 )

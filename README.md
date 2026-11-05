@@ -26,6 +26,12 @@ vehicle, CAN, GNSS or LiDAR SDK modules.
 The product may declare all modules for its full inventory; that is distinct
 from an independent consumer declaring only `hardware.camera`.
 
+Driver SDK and system-library adapters belong to the hardware module that uses
+them: `hardware.camera_gst` owns the GStreamer header/library wrapper under
+`camera_gst/third_party/gstreamer`, and `hardware.gnss` owns RTKLIB under
+`gnss/third_party/rtklib`. The root product repository does not carry a second
+copy of these hardware-only third-party packages.
+
 ```starlark
 bazel_dep(name = "hardware.camera", version = "0.1.0")
 bazel_dep(name = "hardware.vehicle", version = "0.1.0")
@@ -82,9 +88,12 @@ Camera-only consumers therefore do not resolve `wheelos_transform`.
 The product's runtime installation uses Bazel-maintained `rules_pkg`:
 `pkg_install` installs a directory explicitly and `pkg_tar` produces an archive.
 Modules declare `pkg_files`/`pkg_filegroup` mappings and explicit `install_dir`
-targets directly from `rules_pkg`. The legacy `install()` interface, custom
-provider, templates and forwarding layers have been removed. Runtime dependency
-collection belongs to product runtime assembly, not module SDK file mappings.
+targets directly from `rules_pkg`, while product runtime assembly uses Core's
+`//runtime` rules to validate and materialize `bin/`, `lib/`, `conf/`, `dag/`,
+and `launch/` layouts with software-root-relative references. The legacy
+`install()` interface, custom provider, templates and forwarding layers have
+been removed. Runtime dependency collection belongs to product runtime assembly,
+not module SDK file mappings.
 C++ lint is an explicit command/review operation, not a Bazel build target;
 consumers retain their own lint configuration.
 

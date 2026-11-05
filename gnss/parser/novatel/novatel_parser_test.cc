@@ -26,6 +26,7 @@
 #include <vector>
 
 #include "gtest/gtest.h"
+#include "tools/cpp/runfiles/runfiles.h"
 
 namespace apollo {
 namespace drivers {
@@ -568,10 +569,13 @@ TEST(NovatelParserTest, CovarianceIsEpochBoundAndAttitudeCrossTermsChangeSign) {
 }
 
 TEST(NovatelParserTest, RealCaptureMatchesRecordedRatesAndPhysicalScale) {
-  const char* runfiles = std::getenv("TEST_SRCDIR");
-  const std::string path =
-      std::string(runfiles ? std::string(runfiles) + "/_main/" : "") +
-      "modules/drivers/gnss/test_data/novatel.bin";
+  std::string error;
+  std::unique_ptr<bazel::tools::cpp::runfiles::Runfiles> runfiles(
+      bazel::tools::cpp::runfiles::Runfiles::CreateForTest(&error));
+  ASSERT_NE(nullptr, runfiles) << error;
+  const char* capture = std::getenv("NOVATEL_TEST_CAPTURE");
+  ASSERT_NE(nullptr, capture);
+  const std::string path = runfiles->Rlocation(capture);
   std::ifstream input(path, std::ios::binary);
   ASSERT_TRUE(input.is_open()) << path;
   const std::string bytes((std::istreambuf_iterator<char>(input)), {});

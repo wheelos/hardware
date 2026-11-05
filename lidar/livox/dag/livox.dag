@@ -1,5 +1,5 @@
 module_config {
-    module_library : "/apollo/bazel-bin/modules/drivers/lidar/livox/liblivox_component.so"
+    module_library : "lib/components/hardware/liblivox_component.so"
     components {
         class_name : "LivoxLidarComponent"
         config {

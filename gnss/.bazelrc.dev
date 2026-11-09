@@ -1,0 +1,7 @@
+common:dev --lockfile_mode=off
+common:dev --registry=file:///apollo/pkgs/bazel-central-registry
+common:dev --override_module=hardware.build=../build
+common:dev --override_module=hardware.hal=../hal
+common:dev --override_module=wheelos_common=../../common
+common:dev --override_module=wheelos_core=../../core
+common:dev --override_module=wheelos_msgs=../../wheelos_msgs

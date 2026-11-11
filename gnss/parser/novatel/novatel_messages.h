@@ -365,9 +365,9 @@ struct BestVel {
 };
 static_assert(sizeof(BestVel) == 44, "Incorrect size of BestVel");
 
-// Legacy CORRIMUDATA(S)/IMURATECORRIMUS: integrated angle/velocity changes,
-// corrected for gravity, Earth rotation and estimated sensor errors. Multiply
-// by LOG ONTIME rate for CORRIMUDATA(S), or native rate for IMURATECORRIMUS.
+// Legacy CORRIMUDATA(S)/IMURATECORRIMUS: angle/velocity increments.
+// Multiply by LOG ONTIME rate for CORRIMUDATA(S), or native rate for
+// IMURATECORRIMUS. Correction semantics depend on receiver implementation.
 // Modern CORRIMUS also has 60 bytes but a different layout (imu_data_count,
 // six doubles, reserved); it must NOT be decoded with this structure.
 struct CorrImuData {
@@ -584,6 +584,11 @@ inline ImuParameter GetImuParameter(ImuType type) {
     // M21
     case ImuType::M21:
       return {2.6631610900792384e-09, 7.4818801879882799e-08, 100.0};
+
+    case ImuType::SCHA634_D03:
+      // Receiver's RAWIMU count-to-increment factors; its output rate is
+      // configured separately and converts these increments to SI rates.
+      return {M_PI / (180.0 * 160849.543863), 1.0 / 655360.0, 0.0};
 
     default:
       return {0.0, 0.0, 0.0};

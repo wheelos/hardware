@@ -80,6 +80,8 @@ message NovatelConfig {
   // values reject legacy corrected logs, without disabling raw IMU/PVA.
   // IMURATECORRIMUS instead requires a detected or configured native model.
   optional double corrimu_rate_hz = 2;
+  // Required for SCHA634_D03 RAWIMU: actual receiver output rate, in Hz.
+  optional double rawimu_rate_hz = 3;
 }
 
 message UbloxConfig {}
@@ -107,6 +109,7 @@ enum ImuType {
   X26              = 64; // X26
   X36D             = 65; // X36D
   M21              = 66; // M21
+  SCHA634_D03       = 67; // Murata SCHA634-D03; legacy RAWIMU scale
 }
 
 message Config {

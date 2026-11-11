@@ -72,12 +72,16 @@ namespace gnss {
 // odometry velocity comes from PVA. gnss_status follows position logs only.
 // ins_status is emitted on a state change or the next PVA after >1 s of wall
 // time, not by a fixed-rate timer. These two status headers use host time;
-// IMU/PVA/best_pose/heading measurement headers use GPS-to-Unix event time.
+// payload-timed IMU/PVA/corrected-IMU headers use GPS-to-Unix event time.
+// Header-timed messages are still decoded when header time is unavailable;
+// their measurement_time is omitted and publishers retain host receive time.
 //
 // Rates are controlled by receiver LOG commands, not this parser. Raw counts
-// are converted with the model's native rate; CORRIMUDATA(S) increments use
+// are converted with the model's native rate, except SCHA634_D03 which uses
+// its configured receiver output rate. CORRIMUDATA(S) increments use
 // corrimu_rate_hz = 1 / LOG ONTIME period. IMURATECORRIMUS uses the native
-// rate. Enable only one corrected-IMU log family. No arrival-time rate
+// rate (or the configured SCHA634_D03 rate). Enable only one corrected-IMU
+// log family. No arrival-time rate
 // estimation, resampling or gap filling is performed. Duplicate/backward
 // raw/corrected IMU epochs are rejected; recreate the parser after a
 // receiver/replay time reset.
@@ -87,7 +91,7 @@ namespace gnss {
 // is FLU specific force [m/s^2, including gravity] and angular rate [rad/s];
 // measurement_span is one native sample even after a gap. imu_orientation is
 // a discrete enclosure-to-FLU mapping, not arbitrary mounting calibration.
-// Corrected IMU has gravity/Earth rotation/estimated biases removed; DataParser
+// Corrected-IMU correction semantics depend on the receiver; DataParser
 // converts its internal FLU vectors back to legacy RFU for corrected_imu.
 // Do not substitute it for raw specific force in a LIO frontend.
 //
@@ -100,68 +104,69 @@ namespace gnss {
 // imuStatus bits and receiver time_status are not a complete
 // sensor-health/time-quality filter.
 class NovatelParser : public Parser {
- public:
+public:
   NovatelParser();
-  explicit NovatelParser(const config::Config& config);
+  explicit NovatelParser(const config::Config &config);
   ~NovatelParser() override;
 
   bool ProcessHeader() override;
   std::optional<std::vector<Parser::ParsedMessage>> ProcessPayload() override;
 
- private:
+private:
   // CRC covers header + payload, excluding the trailing CRC itself.
   bool CheckCRC(std::string_view message_view);
 
   // Dispatch a CRC-validated full frame.
-  std::vector<Parser::ParsedMessage> PrepareMessage(
-      std::string_view message_view);
+  std::vector<Parser::ParsedMessage>
+  PrepareMessage(std::string_view message_view);
 
   // Decode wire payloads into independent message snapshots.
-  bool HandleBestPos(const novatel::BestPos* pos, uint16_t gps_week,
-                     uint32_t gps_millisecs);
+  bool HandleBestPos(const novatel::BestPos *pos, uint16_t gps_week,
+                     uint32_t gps_millisecs, bool header_time_valid);
 
-  bool HandleGnssBestpos(const novatel::BestPos* pos, uint16_t gps_week,
-                         uint32_t gps_millisecs);
+  bool HandleGnssBestpos(const novatel::BestPos *pos, uint16_t gps_week,
+                         uint32_t gps_millisecs, bool header_time_valid);
 
-  bool HandleBestVel(const novatel::BestVel* vel, uint16_t gps_week,
-                     uint32_t gps_millisecs);
+  bool HandleBestVel(const novatel::BestVel *vel, uint16_t gps_week,
+                     uint32_t gps_millisecs, bool header_time_valid);
 
-  bool HandleCorrImuData(const novatel::CorrImuData* imu,
+  bool HandleCorrImuData(const novatel::CorrImuData *imu,
                          novatel::MessageId message_id);
 
   // Cache covariance for a PVA with the same measurement epoch.
-  bool HandleInsCov(const novatel::InsCov* cov);
+  bool HandleInsCov(const novatel::InsCov *cov);
 
-  bool HandleInsPva(const novatel::InsPva* pva);
+  bool HandleInsPva(const novatel::InsPva *pva);
 
   // INSPVAX is intentionally a status output, not an alternative PVA source.
-  bool HandleInsPvax(const novatel::InsPvaX* pvax, uint16_t gps_week,
-                     uint32_t gps_millisecs);
+  bool HandleInsPvax(const novatel::InsPvaX *pvax, uint16_t gps_week,
+                     uint32_t gps_millisecs, bool header_time_valid);
 
   // Handles Raw IMU data (IMU measurements/integrals)
-  bool HandleRawImuX(const novatel::RawImuX* imu);
+  bool HandleRawImuX(const novatel::RawImuX *imu);
 
-  bool HandleRawImu(const novatel::RawImu* imu);
+  bool HandleRawImu(const novatel::RawImu *imu);
 
-  bool DecodeRawImu(const novatel::RawImu& imu, config::ImuType type);
+  bool DecodeRawImu(const novatel::RawImu &imu, config::ImuType type);
 
   // Handles Ephemeris data
-  bool HandleBdsEph(const novatel::BDS_Ephemeris* bds_emph);
+  bool HandleBdsEph(const novatel::BDS_Ephemeris *bds_emph);
 
-  bool HandleGpsEph(const novatel::GPS_Ephemeris* gps_emph);
+  bool HandleGpsEph(const novatel::GPS_Ephemeris *gps_emph);
 
-  bool HandleGloEph(const novatel::GLO_Ephemeris* glo_emph);
+  bool HandleGloEph(const novatel::GLO_Ephemeris *glo_emph);
 
-  void SetObservationTime();
+  void SetObservationTime(bool header_time_valid);
 
   // RTKLIB consumes complete OEM frames, including header and CRC.
-  bool DecodeGnssObservation(const uint8_t* obs_data,
-                             const uint8_t* obs_data_end);
+  bool DecodeGnssObservation(const uint8_t *obs_data,
+                             const uint8_t *obs_data_end,
+                             bool header_time_valid);
 
-  bool HandleHeading(const novatel::Heading* heading, uint16_t gps_week,
-                     uint32_t gps_millisecs);
+  bool HandleHeading(const novatel::Heading *heading, uint16_t gps_week,
+                     uint32_t gps_millisecs, bool header_time_valid);
 
- private:
+private:
   // Store total message length and header length determined in ProcessHeader
   size_t total_length_ = 0;
   size_t header_length_ = 0;
@@ -171,6 +176,7 @@ class NovatelParser : public Parser {
   bool has_configured_imu_type_ = false;
   std::optional<config::ImuType> detected_imu_type_;
   double corrimu_rate_hz_ = 0.0;
+  double rawimu_rate_hz_ = 0.0;
   int imu_frame_mapping_ = 5;
   // Reject duplicate/backward IMU epochs. Recreate the parser on a time reset.
   double imu_measurement_time_previous_ = -1.0;
@@ -187,19 +193,19 @@ class NovatelParser : public Parser {
   raw_t raw_;
 
   ::apollo::drivers::gnss::Gnss
-      gnss_;  // Position or velocity, never stale pairs.
+      gnss_; // Position or velocity, never stale pairs.
   ::apollo::drivers::gnss::GnssBestPose bestpos_;
-  ::apollo::drivers::gnss::Imu imu_;  // For RAWIMU/RAWIMUX
-  ::apollo::drivers::gnss::Ins ins_;  // PVA only; never carries stale IMU data.
+  ::apollo::drivers::gnss::Imu imu_; // For RAWIMU/RAWIMUX
+  ::apollo::drivers::gnss::Ins ins_; // PVA only; never carries stale IMU data.
   ::apollo::drivers::gnss::Ins corrimu_;
-  ::apollo::drivers::gnss::InsStat ins_stat_;              // For INSPVAX
-  ::apollo::drivers::gnss::GnssEphemeris gnss_ephemeris_;  // For Ephemerides
+  ::apollo::drivers::gnss::InsStat ins_stat_;             // For INSPVAX
+  ::apollo::drivers::gnss::GnssEphemeris gnss_ephemeris_; // For Ephemerides
   ::apollo::drivers::gnss::EpochObservation gnss_observation_;
-  ::apollo::drivers::gnss::Heading heading_;  // For HEADING
+  ::apollo::drivers::gnss::Heading heading_; // For HEADING
 
   DISALLOW_COPY_AND_ASSIGN(NovatelParser);
 };
 
-}  // namespace gnss
-}  // namespace drivers
-}  // namespace apollo
+} // namespace gnss
+} // namespace drivers
+} // namespace apollo

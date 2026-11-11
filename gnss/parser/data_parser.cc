@@ -47,12 +47,12 @@ namespace {
 // Using EPSG:4326 for WGS84 geographic is standard.
 // Alternatively, could use "+proj=latlong +ellps=WGS84 +datum=WGS84" with
 // proj_create
-const char* WGS84_TEXT = "EPSG:4326";
+const char *WGS84_TEXT = "EPSG:4326";
 
-}  // namespace
+} // namespace
 
-DataParser::DataParser(const config::Config& config,
-                       const std::shared_ptr<apollo::cyber::Node>& node)
+DataParser::DataParser(const config::Config &config,
+                       const std::shared_ptr<apollo::cyber::Node> &node)
     : config_(config), node_(node) {
   proj_context_ = proj_context_create();
   if (!proj_context_) {
@@ -121,7 +121,7 @@ bool DataParser::Init() {
   return true;
 }
 
-void DataParser::ParseRawData(const std::string& msg) {
+void DataParser::ParseRawData(const std::string &msg) {
   if (!init_flag_) {
     AERROR << "Data parser not init or PROJ initialization failed.";
     return;
@@ -130,7 +130,7 @@ void DataParser::ParseRawData(const std::string& msg) {
   gnss_parser_->AppendData(msg);
   auto messages = gnss_parser_->ParseAllMessages();
 
-  for (const auto& [msg_type, msg_variant] : messages) {
+  for (const auto &[msg_type, msg_variant] : messages) {
     if (std::holds_alternative<Parser::RawDataPtr>(msg_variant)) {
       // Store raw byte messages. Currently only GPGGA is stored.
       // This is needed if raw NMEA strings are required elsewhere.
@@ -152,7 +152,7 @@ void DataParser::ParseRawData(const std::string& msg) {
   }
 }
 
-void DataParser::CheckInsStatus(const std::shared_ptr<Ins>& ins) {
+void DataParser::CheckInsStatus(const std::shared_ptr<Ins> &ins) {
   if (ins == nullptr) {
     AERROR << "Received null Ins message";
     return;
@@ -167,23 +167,23 @@ void DataParser::CheckInsStatus(const std::shared_ptr<Ins>& ins) {
     last_notify = now;
     ins_status_record_ = static_cast<uint32_t>(ins->type());
     switch (ins->type()) {
-      case Ins::GOOD:
-        ins_status_.set_type(InsStatus::GOOD);
-        break;
-      case Ins::CONVERGING:
-        ins_status_.set_type(InsStatus::CONVERGING);
-        break;
-      case Ins::INVALID:
-      default:
-        ins_status_.set_type(InsStatus::INVALID);
-        break;
+    case Ins::GOOD:
+      ins_status_.set_type(InsStatus::GOOD);
+      break;
+    case Ins::CONVERGING:
+      ins_status_.set_type(InsStatus::CONVERGING);
+      break;
+    case Ins::INVALID:
+    default:
+      ins_status_.set_type(InsStatus::INVALID);
+      break;
     }
     common::util::FillHeader("gnss", &ins_status_);
     insstatus_writer_->Write(ins_status_);
   }
 }
 
-void DataParser::CheckGnssStatus(const std::shared_ptr<Gnss>& gnss) {
+void DataParser::CheckGnssStatus(const std::shared_ptr<Gnss> &gnss) {
   // Update status always, publish is handled implicitly by Cyber writer if
   // needed. Could add logic here to only publish on status change if desired,
   // similar to CheckInsStatus
@@ -213,52 +213,51 @@ void DataParser::CheckGnssStatus(const std::shared_ptr<Gnss>& gnss) {
 }
 
 void DataParser::DispatchMessage(Parser::MessageType type,
-                                 const Parser::ProtoMessagePtr& msg_ptr) {
+                                 const Parser::ProtoMessagePtr &msg_ptr) {
   CHECK_NOTNULL(msg_ptr);
   switch (type) {
-    case Parser::MessageType::GNSS:
-      CheckGnssStatus(std::dynamic_pointer_cast<Gnss>(msg_ptr));
-      break;
-    case Parser::MessageType::BEST_GNSS_POS:
-      PublishBestpos(msg_ptr);
-      break;
-    case Parser::MessageType::IMU:
-      PublishImu(msg_ptr);
-      break;
-    case Parser::MessageType::INS:
-      CheckInsStatus(std::dynamic_pointer_cast<Ins>(msg_ptr));
-      if (const auto ins = std::dynamic_pointer_cast<Ins>(msg_ptr);
-          ins && ins->has_linear_acceleration() &&
-          ins->has_angular_velocity()) {
-        PublishCorrimu(msg_ptr);
-      }
-      PublishOdometry(msg_ptr);
-      break;
-    case Parser::MessageType::CORRECTED_IMU:
+  case Parser::MessageType::GNSS:
+    CheckGnssStatus(std::dynamic_pointer_cast<Gnss>(msg_ptr));
+    break;
+  case Parser::MessageType::BEST_GNSS_POS:
+    PublishBestpos(msg_ptr);
+    break;
+  case Parser::MessageType::IMU:
+    PublishImu(msg_ptr);
+    break;
+  case Parser::MessageType::INS:
+    CheckInsStatus(std::dynamic_pointer_cast<Ins>(msg_ptr));
+    if (const auto ins = std::dynamic_pointer_cast<Ins>(msg_ptr);
+        ins && ins->has_linear_acceleration() && ins->has_angular_velocity()) {
       PublishCorrimu(msg_ptr);
-      break;
-    case Parser::MessageType::INS_STAT:
-      PublishInsStat(msg_ptr);
-      break;
-    case Parser::MessageType::BDSEPHEMERIDES:
-    case Parser::MessageType::GPSEPHEMERIDES:
-    case Parser::MessageType::GLOEPHEMERIDES:
-      PublishEphemeris(msg_ptr);
-      break;
-    case Parser::MessageType::OBSERVATION:
-      PublishObservation(msg_ptr);
-      break;
-    case Parser::MessageType::HEADING:
-      PublishHeading(msg_ptr);
-      break;
-    default:
-      ADEBUG << "Received unhandled Protobuf message type: "
-             << static_cast<int>(type);
-      break;
+    }
+    PublishOdometry(msg_ptr);
+    break;
+  case Parser::MessageType::CORRECTED_IMU:
+    PublishCorrimu(msg_ptr);
+    break;
+  case Parser::MessageType::INS_STAT:
+    PublishInsStat(msg_ptr);
+    break;
+  case Parser::MessageType::BDSEPHEMERIDES:
+  case Parser::MessageType::GPSEPHEMERIDES:
+  case Parser::MessageType::GLOEPHEMERIDES:
+    PublishEphemeris(msg_ptr);
+    break;
+  case Parser::MessageType::OBSERVATION:
+    PublishObservation(msg_ptr);
+    break;
+  case Parser::MessageType::HEADING:
+    PublishHeading(msg_ptr);
+    break;
+  default:
+    ADEBUG << "Received unhandled Protobuf message type: "
+           << static_cast<int>(type);
+    break;
   }
 }
 
-void DataParser::PublishInsStat(const Parser::ProtoMessagePtr& msg_ptr) {
+void DataParser::PublishInsStat(const Parser::ProtoMessagePtr &msg_ptr) {
   // Get the underlying protobuf message
   auto ins_stat_ptr = std::dynamic_pointer_cast<InsStat>(msg_ptr);
   if (!ins_stat_ptr) {
@@ -274,7 +273,7 @@ void DataParser::PublishInsStat(const Parser::ProtoMessagePtr& msg_ptr) {
   insstat_writer_->Write(ins_stat_ptr);
 }
 
-void DataParser::PublishBestpos(const Parser::ProtoMessagePtr& msg_ptr) {
+void DataParser::PublishBestpos(const Parser::ProtoMessagePtr &msg_ptr) {
   // Get the underlying protobuf message
   auto bestpos_ptr = std::dynamic_pointer_cast<GnssBestPose>(msg_ptr);
   if (!bestpos_ptr) {
@@ -283,14 +282,15 @@ void DataParser::PublishBestpos(const Parser::ProtoMessagePtr& msg_ptr) {
   }
   // Create message directly and publish
   common::util::FillHeader("gnss", bestpos_ptr.get());
-  if (config_.data().format() == config::Stream::NOVATEL_BINARY) {
+  if (config_.data().format() == config::Stream::NOVATEL_BINARY &&
+      bestpos_ptr->has_measurement_time()) {
     bestpos_ptr->mutable_header()->set_timestamp_sec(
         GpsToUnixSeconds(bestpos_ptr->measurement_time()));
   }
   gnssbestpose_writer_->Write(bestpos_ptr);
 }
 
-void DataParser::PublishImu(const Parser::ProtoMessagePtr& msg_ptr) {
+void DataParser::PublishImu(const Parser::ProtoMessagePtr &msg_ptr) {
   auto imu_in = std::dynamic_pointer_cast<Imu>(msg_ptr);
   if (!imu_in) {
     AERROR << "Failed to cast message to Imu";
@@ -321,10 +321,10 @@ void DataParser::PublishImu(const Parser::ProtoMessagePtr& msg_ptr) {
       imu_in->angular_velocity().z());
 
   common::util::FillHeader("gnss", raw_imu_out.get());
-  rawimu_writer_->Write(raw_imu_out);  // Using shared_ptr for created message
+  rawimu_writer_->Write(raw_imu_out); // Using shared_ptr for created message
 }
 
-void DataParser::PublishOdometry(const Parser::ProtoMessagePtr& msg_ptr) {
+void DataParser::PublishOdometry(const Parser::ProtoMessagePtr &msg_ptr) {
   auto ins = std::dynamic_pointer_cast<Ins>(msg_ptr);
   if (!ins) {
     AERROR << "Failed to cast message to Ins for Odometry";
@@ -341,7 +341,7 @@ void DataParser::PublishOdometry(const Parser::ProtoMessagePtr& msg_ptr) {
   double unix_sec = GpsToUnixSeconds(ins->measurement_time());
   common::util::FillHeader("gnss", gps.get());
   gps->mutable_header()->set_timestamp_sec(unix_sec);
-  auto* gps_msg = gps->mutable_localization();
+  auto *gps_msg = gps->mutable_localization();
 
   // 1. pose xyz (WGS84 to UTM transformation)
   double lon = ins->position().lon();
@@ -376,10 +376,10 @@ void DataParser::PublishOdometry(const Parser::ProtoMessagePtr& msg_ptr) {
   gps_msg->mutable_linear_velocity()->set_y(ins->linear_velocity().y());
   gps_msg->mutable_linear_velocity()->set_z(ins->linear_velocity().z());
 
-  gps_writer_->Write(gps);  // Using shared_ptr for created message
+  gps_writer_->Write(gps); // Using shared_ptr for created message
 }
 
-void DataParser::PublishCorrimu(const Parser::ProtoMessagePtr& msg_ptr) {
+void DataParser::PublishCorrimu(const Parser::ProtoMessagePtr &msg_ptr) {
   auto ins = std::dynamic_pointer_cast<Ins>(msg_ptr);
   if (!ins) {
     AERROR << "Failed to cast message to Ins for Corrimu";
@@ -391,7 +391,7 @@ void DataParser::PublishCorrimu(const Parser::ProtoMessagePtr& msg_ptr) {
   common::util::FillHeader("gnss", imu.get());
   imu->mutable_header()->set_timestamp_sec(unix_sec);
 
-  auto* imu_msg = imu->mutable_imu();
+  auto *imu_msg = imu->mutable_imu();
 
   // The legacy CorrectedImu consumer rotates RFU vectors with Pose's
   // RFU -> ENU quaternion. Raw Imu remains FLU on its separate topic.
@@ -413,16 +413,16 @@ void DataParser::PublishCorrimu(const Parser::ProtoMessagePtr& msg_ptr) {
   corrimu_writer_->Write(imu);
 }
 
-void DataParser::PublishEphemeris(const Parser::ProtoMessagePtr& msg_ptr) {
+void DataParser::PublishEphemeris(const Parser::ProtoMessagePtr &msg_ptr) {
   auto eph_ptr = std::dynamic_pointer_cast<GnssEphemeris>(msg_ptr);
   if (!eph_ptr) {
     AERROR << "Failed to cast message to GnssEphemeris";
     return;
   }
-  gnssephemeris_writer_->Write(eph_ptr);  // Use const& overload
+  gnssephemeris_writer_->Write(eph_ptr); // Use const& overload
 }
 
-void DataParser::PublishObservation(const Parser::ProtoMessagePtr& msg_ptr) {
+void DataParser::PublishObservation(const Parser::ProtoMessagePtr &msg_ptr) {
   // Get the underlying protobuf message
   auto observation_ptr = std::dynamic_pointer_cast<EpochObservation>(msg_ptr);
   if (!observation_ptr) {
@@ -435,7 +435,7 @@ void DataParser::PublishObservation(const Parser::ProtoMessagePtr& msg_ptr) {
   epochobservation_writer_->Write(observation_ptr);
 }
 
-void DataParser::PublishHeading(const Parser::ProtoMessagePtr& msg_ptr) {
+void DataParser::PublishHeading(const Parser::ProtoMessagePtr &msg_ptr) {
   // Get the underlying protobuf message
   auto heading_ptr = std::dynamic_pointer_cast<Heading>(msg_ptr);
   if (!heading_ptr) {
@@ -444,13 +444,14 @@ void DataParser::PublishHeading(const Parser::ProtoMessagePtr& msg_ptr) {
   }
   // Create message directly and publish
   common::util::FillHeader("gnss", heading_ptr.get());
-  if (config_.data().format() == config::Stream::NOVATEL_BINARY) {
+  if (config_.data().format() == config::Stream::NOVATEL_BINARY &&
+      heading_ptr->has_measurement_time()) {
     heading_ptr->mutable_header()->set_timestamp_sec(
         GpsToUnixSeconds(heading_ptr->measurement_time()));
   }
-  heading_writer_->Write(heading_ptr);  // Use const& overload
+  heading_writer_->Write(heading_ptr); // Use const& overload
 }
 
-}  // namespace gnss
-}  // namespace drivers
-}  // namespace apollo
+} // namespace gnss
+} // namespace drivers
+} // namespace apollo

@@ -25,8 +25,8 @@
 #include <string>
 #include <vector>
 
-#include "gtest/gtest.h"
 #include "tools/cpp/runfiles/runfiles.h"
+#include "gtest/gtest.h"
 
 namespace apollo {
 namespace drivers {
@@ -35,12 +35,11 @@ namespace {
 
 // Wire offsets and units are from the OEM6/OEM7 log definitions, independent
 // of the packed production structures.
-template <typename T>
-void Put(std::string* data, size_t offset, T value) {
+template <typename T> void Put(std::string *data, size_t offset, T value) {
   std::memcpy(data->data() + offset, &value, sizeof(value));
 }
 
-uint32_t WireCrc(const std::string& data) {
+uint32_t WireCrc(const std::string &data) {
   uint32_t crc = 0;
   for (unsigned char byte : data) {
     crc ^= byte;
@@ -51,8 +50,9 @@ uint32_t WireCrc(const std::string& data) {
   return crc;
 }
 
-std::string Frame(uint16_t id, const std::string& payload,
-                  bool short_header = true, uint32_t millis = 100000) {
+std::string Frame(uint16_t id, const std::string &payload,
+                  bool short_header = true, uint32_t millis = 100000,
+                  uint16_t week = 2200, uint8_t time_status = 160) {
   std::string frame(short_header ? 12 : 28, '\0');
   frame[0] = '\xaa';
   frame[1] = '\x44';
@@ -60,23 +60,23 @@ std::string Frame(uint16_t id, const std::string& payload,
   frame[3] = short_header ? payload.size() : 28;
   Put(&frame, 4, id);
   if (short_header) {
-    Put<uint16_t>(&frame, 6, 2200);
+    Put(&frame, 6, week);
     Put(&frame, 8, millis);
   } else {
     Put<uint16_t>(&frame, 8, payload.size());
-    frame[13] = static_cast<char>(160);  // FINESTEERING
-    Put<uint16_t>(&frame, 14, 2200);
+    frame[13] = static_cast<char>(time_status);
+    Put(&frame, 14, week);
     Put(&frame, 16, millis);
   }
   frame += payload;
   const uint32_t crc = WireCrc(frame);
-  frame.append(reinterpret_cast<const char*>(&crc), sizeof(crc));
+  frame.append(reinterpret_cast<const char *>(&crc), sizeof(crc));
   return frame;
 }
 
 std::string RawPayload(double seconds = 100.0) {
   std::string payload(40, '\0');
-  payload[1] = 26;  // ISA100C
+  payload[1] = 26; // ISA100C
   Put<uint16_t>(&payload, 2, 2200);
   Put(&payload, 4, seconds);
   Put<int32_t>(&payload, 16, 2500000);
@@ -105,8 +105,8 @@ std::string PvaPayload(double seconds = 100.0) {
   Put(&payload, 12, 37.0);
   Put(&payload, 20, -122.0);
   Put(&payload, 28, 25.0);
-  Put(&payload, 36, 2.0);  // north
-  Put(&payload, 44, 3.0);  // east
+  Put(&payload, 36, 2.0); // north
+  Put(&payload, 44, 3.0); // east
   Put(&payload, 52, 4.0);
   Put(&payload, 60, 10.0);
   Put(&payload, 68, 20.0);
@@ -115,16 +115,182 @@ std::string PvaPayload(double seconds = 100.0) {
   return payload;
 }
 
-std::vector<Parser::ParsedMessage> Parse(NovatelParser* parser,
-                                         const std::string& bytes) {
+std::vector<Parser::ParsedMessage> Parse(NovatelParser *parser,
+                                         const std::string &bytes) {
   parser->AppendData(bytes);
   return parser->ParseAllMessages();
 }
 
 template <typename T>
-std::shared_ptr<T> Message(const Parser::ParsedMessage& parsed) {
+std::shared_ptr<T> Message(const Parser::ParsedMessage &parsed) {
   return std::dynamic_pointer_cast<T>(
       std::get<Parser::ProtoMessagePtr>(parsed.second));
+}
+
+TEST(NovatelParserTest, PayloadTimedLogsParseWithInvalidHeaderTime) {
+  constexpr uint16_t kPayloadWeek = 2243;
+  constexpr double kPayloadSeconds = 100.0;
+  const auto invalid_header = [](uint16_t id, const std::string &payload) {
+    return Frame(id, payload, false, 100000, 0, 20);
+  };
+
+  auto raw_payload = RawPayload(kPayloadSeconds);
+  Put<uint16_t>(&raw_payload, 2, kPayloadWeek);
+  NovatelParser raw_parser;
+  const auto raw =
+      Parse(&raw_parser, invalid_header(novatel::RAWIMUSX, raw_payload));
+  ASSERT_EQ(1u, raw.size());
+  ASSERT_EQ(Parser::MessageType::IMU, raw[0].first);
+  EXPECT_DOUBLE_EQ(kPayloadWeek * 604800.0 + kPayloadSeconds,
+                   Message<Imu>(raw[0])->measurement_time());
+
+  auto corr_payload = CorrPayload(kPayloadSeconds);
+  Put<uint32_t>(&corr_payload, 0, kPayloadWeek);
+  config::Config config;
+  config.mutable_novatel_config()->set_corrimu_rate_hz(100);
+  NovatelParser corr_parser(config);
+  const auto corrected =
+      Parse(&corr_parser, invalid_header(novatel::CORRIMUDATA, corr_payload));
+  ASSERT_EQ(1u, corrected.size());
+  ASSERT_EQ(Parser::MessageType::CORRECTED_IMU, corrected[0].first);
+  EXPECT_DOUBLE_EQ(kPayloadWeek * 604800.0 + kPayloadSeconds,
+                   Message<Ins>(corrected[0])->measurement_time());
+  EXPECT_NEAR(5.0, Message<Ins>(corrected[0])->linear_acceleration().x(),
+              1e-12);
+  EXPECT_NEAR(-4.0, Message<Ins>(corrected[0])->linear_acceleration().y(),
+              1e-12);
+
+  auto pva_payload = PvaPayload(kPayloadSeconds);
+  Put<uint32_t>(&pva_payload, 0, kPayloadWeek);
+  NovatelParser pva_parser;
+  const auto pva =
+      Parse(&pva_parser, invalid_header(novatel::INSPVAS, pva_payload));
+  ASSERT_EQ(1u, pva.size());
+  ASSERT_EQ(Parser::MessageType::INS, pva[0].first);
+  const auto ins = Message<Ins>(pva[0]);
+  EXPECT_DOUBLE_EQ(kPayloadWeek * 604800.0 + kPayloadSeconds,
+                   ins->measurement_time());
+  EXPECT_DOUBLE_EQ(37.0, ins->position().lat());
+  EXPECT_DOUBLE_EQ(-122.0, ins->position().lon());
+  EXPECT_DOUBLE_EQ(3.0, ins->linear_velocity().x());
+  EXPECT_DOUBLE_EQ(2.0, ins->linear_velocity().y());
+}
+
+TEST(NovatelParserTest, SCHA634D03RawCountsUseReceiverScaleAndOutputRate) {
+  config::Config config;
+  config.set_imu_type(config::SCHA634_D03);
+  config.mutable_novatel_config()->set_rawimu_rate_hz(100);
+  NovatelParser parser(config);
+
+  auto payload = RawPayload(100.0);
+  Put<uint32_t>(&payload, 0, 2243);
+  Put<int32_t>(&payload, 16, 65536);
+  Put<int32_t>(&payload, 20, -65536);
+  Put<int32_t>(&payload, 24, 0);
+  Put<int32_t>(&payload, 28, 160849);
+  Put<int32_t>(&payload, 32, -160849);
+  Put<int32_t>(&payload, 36, 0);
+
+  const auto invalid_header =
+      Frame(novatel::RAWIMU, payload, false, 100000, 0, 20);
+  const auto messages = Parse(&parser, invalid_header);
+  ASSERT_EQ(1u, messages.size());
+  ASSERT_EQ(Parser::MessageType::IMU, messages[0].first);
+
+  const auto imu = Message<Imu>(messages[0]);
+  ASSERT_NE(nullptr, imu);
+  EXPECT_NEAR(0.01, imu->measurement_span(), 1e-8);
+  EXPECT_NEAR(10.0, imu->linear_acceleration().z(), 1e-9);
+  EXPECT_NEAR(160849.0 * 100.0 / 160849.543863 * M_PI / 180.0,
+              imu->angular_velocity().z(), 1e-12);
+  EXPECT_NEAR(10.0, imu->linear_acceleration().x(), 1e-9);
+  EXPECT_NEAR(160849.0 * 100.0 / 160849.543863 * M_PI / 180.0,
+              imu->angular_velocity().x(), 1e-12);
+
+  auto wide_count_payload = RawPayload(100.01);
+  Put<uint32_t>(&wide_count_payload, 0, 2243);
+  Put<uint16_t>(&wide_count_payload, 16, 63968);
+  Put<uint16_t>(&wide_count_payload, 18, 0);
+  const auto wide_count = Parse(
+      &parser, Frame(novatel::RAWIMU, wide_count_payload, false, 100000, 0, 20));
+  ASSERT_EQ(1u, wide_count.size());
+  EXPECT_NEAR(63968.0 * 100.0 / 655360.0,
+              Message<Imu>(wide_count[0])->linear_acceleration().z(), 1e-9);
+
+  auto signed_count_payload = RawPayload(100.02);
+  Put<uint32_t>(&signed_count_payload, 0, 2243);
+  Put<int32_t>(&signed_count_payload, 16, -1568);
+  const auto signed_count =
+      Parse(&parser, Frame(novatel::RAWIMU, signed_count_payload, false,
+                           100000, 0, 20));
+  ASSERT_EQ(1u, signed_count.size());
+  EXPECT_NEAR(-1568.0 * 100.0 / 655360.0,
+              Message<Imu>(signed_count[0])->linear_acceleration().z(), 1e-9);
+
+  config.mutable_novatel_config()->set_rawimu_rate_hz(200);
+  NovatelParser faster(config);
+  const auto faster_output = Parse(&faster, invalid_header);
+  ASSERT_EQ(1u, faster_output.size());
+  EXPECT_NEAR(20.0, Message<Imu>(faster_output[0])->linear_acceleration().z(),
+              1e-9);
+  EXPECT_NEAR(0.005, Message<Imu>(faster_output[0])->measurement_span(),
+              1e-9);
+
+  config.mutable_novatel_config()->clear_rawimu_rate_hz();
+  NovatelParser missing_rate(config);
+  EXPECT_TRUE(Parse(&missing_rate, invalid_header).empty());
+  config.mutable_novatel_config()->set_rawimu_rate_hz(
+      std::numeric_limits<double>::quiet_NaN());
+  NovatelParser invalid_rate(config);
+  EXPECT_TRUE(Parse(&invalid_rate, invalid_header).empty());
+}
+
+TEST(NovatelParserTest, ParsesHeaderTimedStatusesWithoutInventingTime) {
+  const auto invalid_header = [](uint16_t id, const std::string &payload,
+                                 uint16_t week = 0, uint8_t time_status = 20) {
+    return Frame(id, payload, false, 100000, week, time_status);
+  };
+
+  std::string ins_status_payload(126, '\0');
+  Put<uint32_t>(&ins_status_payload, 0, 1);
+  Put<uint32_t>(&ins_status_payload, 4, 0);
+  NovatelParser ins_status_parser;
+  const auto ins_status = Parse(
+      &ins_status_parser, invalid_header(novatel::INSPVAX, ins_status_payload));
+  ASSERT_EQ(1u, ins_status.size());
+  ASSERT_EQ(Parser::MessageType::INS_STAT, ins_status[0].first);
+  EXPECT_EQ(1u, Message<InsStat>(ins_status[0])->ins_status());
+  EXPECT_FALSE(Message<InsStat>(ins_status[0])->header().has_timestamp_sec());
+
+  std::string heading_payload(44, '\0');
+  NovatelParser heading_parser;
+  const auto heading =
+      Parse(&heading_parser, invalid_header(novatel::HEADING, heading_payload));
+  ASSERT_EQ(1u, heading.size());
+  ASSERT_EQ(Parser::MessageType::HEADING, heading[0].first);
+  EXPECT_FALSE(Message<Heading>(heading[0])->has_measurement_time());
+
+  std::string position_payload(72, '\0');
+  Put<uint32_t>(&position_payload, 0, 1);   // INSUFFICIENT_OBS
+  Put<uint32_t>(&position_payload, 36, 61); // WGS84 datum
+  NovatelParser position_parser;
+  const auto position = Parse(
+      &position_parser, invalid_header(novatel::BESTGNSSPOS, position_payload));
+  ASSERT_EQ(2u, position.size());
+  EXPECT_FALSE(Message<GnssBestPose>(position[0])->has_measurement_time());
+  EXPECT_FALSE(Message<Gnss>(position[1])->has_measurement_time());
+
+  const auto bad_status =
+      Parse(&position_parser,
+            invalid_header(novatel::BESTGNSSPOS, position_payload, 1, 201));
+  ASSERT_EQ(2u, bad_status.size());
+  EXPECT_FALSE(Message<GnssBestPose>(bad_status[0])->has_measurement_time());
+
+  const auto satellite_time =
+      Parse(&position_parser,
+            invalid_header(novatel::BESTGNSSPOS, position_payload, 2200, 200));
+  ASSERT_EQ(2u, satellite_time.size());
+  EXPECT_TRUE(Message<GnssBestPose>(satellite_time[0])->has_measurement_time());
 }
 
 TEST(NovatelParserTest, RawImuWireTypeUnitsFramesAndFragmentation) {
@@ -175,7 +341,7 @@ TEST(NovatelParserTest, NativeModelRatesAndScalesMatchOfficialDefinitions) {
       {41, 125, (0.008 / 65536) * deg_to_rad / 125,
        (0.2 / 65536) * (9.80665 / 1000) / 125},
   };
-  for (const auto& model : models) {
+  for (const auto &model : models) {
     SCOPED_TRACE(static_cast<int>(model.id));
     NovatelParser parser;
     auto payload = RawPayload();
@@ -205,7 +371,7 @@ TEST(NovatelParserTest, RejectsTypeConflictsFaultsAndUnsupportedMapping) {
   fault[0] = 1;
   EXPECT_TRUE(Parse(&parser, Frame(novatel::RAWIMUSX, fault)).empty());
   auto unknown = RawPayload();
-  unknown[1] = 61;  // OEM7 G370, not the configuration enum's EPSON_G354.
+  unknown[1] = 61; // OEM7 G370, not the configuration enum's EPSON_G354.
   EXPECT_TRUE(Parse(&parser, Frame(novatel::RAWIMUSX, unknown)).empty());
   ASSERT_EQ(1u, Parse(&parser, Frame(novatel::RAWIMUSX, RawPayload())).size());
   EXPECT_TRUE(Parse(&parser, Frame(novatel::RAWIMUSX, RawPayload())).empty());
@@ -301,7 +467,7 @@ TEST(NovatelParserTest, ResynchronizesAfterBadLengthCrcAndHeader) {
   Put<uint16_t>(&bad_length, 8, 65535);
   auto bad_header = Frame(novatel::RAWIMUX, RawPayload(), false);
   bad_header[3] = 0;
-  for (const auto& corrupt : {bad_crc, bad_length, bad_header}) {
+  for (const auto &corrupt : {bad_crc, bad_length, bad_header}) {
     NovatelParser parser;
     const auto parsed = Parse(&parser, std::string("garbage") + corrupt + good);
     ASSERT_EQ(1u, parsed.size());
@@ -321,7 +487,7 @@ TEST(NovatelParserTest, EphemerisSnapshotsDoNotRetainOtherConstellations) {
   std::string gps(224, '\0');
   Put<uint32_t>(&gps, 0, 3);
   Put<uint32_t>(&gps, 24, 2200);
-  Put(&gps, 40, 26560000.0);  // semi-major axis [m]
+  Put(&gps, 40, 26560000.0); // semi-major axis [m]
   const auto gps_messages =
       Parse(&parser, Frame(novatel::GPSEPHEMERIS, gps, false));
   ASSERT_EQ(1u, gps_messages.size());
@@ -356,7 +522,7 @@ TEST(NovatelParserTest, RejectsInvalidTimeNonfinitePvaAndResponse) {
   response[6] = '\x80';
   response.resize(response.size() - 4);
   const auto crc = WireCrc(response);
-  response.append(reinterpret_cast<const char*>(&crc), 4);
+  response.append(reinterpret_cast<const char *>(&crc), 4);
   EXPECT_TRUE(Parse(&parser, response).empty());
   EXPECT_EQ(1u, Parse(&parser, Frame(novatel::RAWIMUSX, RawPayload())).size());
 }
@@ -380,7 +546,7 @@ TEST(NovatelParserTest, FixedStationIdsAndGnssStatusHaveNoStaleFields) {
   EXPECT_DOUBLE_EQ(25.0, Message<Gnss>(best[1])->position().height());
   EXPECT_FALSE(Message<Gnss>(best[1])->has_linear_velocity());
   auto failed = pos;
-  Put<uint32_t>(&failed, 0, 1);  // INSUFFICIENT_OBS
+  Put<uint32_t>(&failed, 0, 1); // INSUFFICIENT_OBS
   Put(&failed, 8, std::numeric_limits<double>::quiet_NaN());
   const auto status =
       Parse(&parser, Frame(novatel::BESTGNSSPOS, failed, false));
@@ -428,7 +594,7 @@ TEST(NovatelParserTest, RejectsInvalidHeadingAndUnsafeEphemerisConversions) {
   ASSERT_EQ(1u, Parse(&parser, Frame(novatel::HEADING, heading, false)).size());
   std::string gps(224, '\0');
   Put<uint32_t>(&gps, 24, 2200);
-  Put(&gps, 40, -1.0);  // sqrt(A) would be invalid.
+  Put(&gps, 40, -1.0); // sqrt(A) would be invalid.
   EXPECT_TRUE(Parse(&parser, Frame(novatel::GPSEPHEMERIS, gps, false)).empty());
   Put(&gps, 40, 26560000.0);
   Put(&gps, 216, std::numeric_limits<double>::quiet_NaN());
@@ -437,10 +603,10 @@ TEST(NovatelParserTest, RejectsInvalidHeadingAndUnsafeEphemerisConversions) {
   const auto valid = Parse(&parser, Frame(novatel::GPSEPHEMERIS, gps, false));
   ASSERT_EQ(1u, valid.size());
   EXPECT_EQ(2u, Message<GnssEphemeris>(valid[0])->keppler_orbit().accuracy());
-  Put(&gps, 64, std::numeric_limits<double>::quiet_NaN());  // eccentricity
+  Put(&gps, 64, std::numeric_limits<double>::quiet_NaN()); // eccentricity
   EXPECT_TRUE(Parse(&parser, Frame(novatel::GPSEPHEMERIS, gps, false)).empty());
   std::string bds(196, '\0');
-  Put(&bds, 76, 5153.795);  // sqrt(A), after AODE/TOE (RTKLIB decoder).
+  Put(&bds, 76, 5153.795); // sqrt(A), after AODE/TOE (RTKLIB decoder).
   Put(&bds, 8, 4.0);
   ASSERT_EQ(1u,
             Parse(&parser, Frame(novatel::BDSEPHEMERIS, bds, false)).size());
@@ -457,7 +623,7 @@ TEST(NovatelParserTest,
   Put<uint16_t>(&glo, 0, 40);
   Put<uint16_t>(&glo, 2, 5);
   Put<uint16_t>(&glo, 6, 2200);
-  Put<uint32_t>(&glo, 12, 10782);  // GLONASS = GPS + 3 h - 18 leap seconds.
+  Put<uint32_t>(&glo, 12, 10782); // GLONASS = GPS + 3 h - 18 leap seconds.
   struct Epoch {
     uint32_t milliseconds;
     uint32_t frame_glonass;
@@ -471,12 +637,12 @@ TEST(NovatelParserTest,
     const auto messages =
         Parse(&parser, Frame(novatel::GLOEPHEMERIS, glo, false));
     ASSERT_EQ(1u, messages.size());
-    const auto& orbit = Message<GnssEphemeris>(messages[0])->glonass_orbit();
+    const auto &orbit = Message<GnssEphemeris>(messages[0])->glonass_orbit();
     EXPECT_EQ(GPS_TIME, orbit.gnss_time_type());
     EXPECT_NEAR(epoch.milliseconds * 0.001, orbit.toe(), 1e-9);
     EXPECT_DOUBLE_EQ(epoch.frame_gps, orbit.tk());
   }
-  Put<uint16_t>(&glo, 0, 37);  // Invalid slot must not underflow the PRN.
+  Put<uint16_t>(&glo, 0, 37); // Invalid slot must not underflow the PRN.
   EXPECT_TRUE(Parse(&parser, Frame(novatel::GLOEPHEMERIS, glo, false)).empty());
   Put<uint16_t>(&glo, 0, 40);
   Put(&glo, 28, std::numeric_limits<double>::infinity());
@@ -487,9 +653,9 @@ TEST(NovatelParserTest,
      RangeFeedsCompleteFrameAndPreservesCodeOnlyObservations) {
   std::string payload(4 + 44, '\0');
   Put<uint32_t>(&payload, 0, 1);
-  Put<uint16_t>(&payload, 4, 3);  // GPS PRN
+  Put<uint16_t>(&payload, 4, 3); // GPS PRN
   Put(&payload, 8, 21000000.0);
-  Put<float>(&payload, 36, 45.0f);  // C/N0
+  Put<float>(&payload, 36, 45.0f); // C/N0
   Put<float>(&payload, 40, 100.0f);
   // GPS L1 C/A: parity known, code locked, phase unlocked.
   Put<uint32_t>(&payload, 44, (1u << 11) | (1u << 12));
@@ -502,7 +668,7 @@ TEST(NovatelParserTest,
   EXPECT_DOUBLE_EQ(100.0, obs->gnss_second_s());
   ASSERT_EQ(1, obs->sat_obs_size());
   ASSERT_EQ(1, obs->sat_obs(0).band_obs_size());
-  const auto& band = obs->sat_obs(0).band_obs(0);
+  const auto &band = obs->sat_obs(0).band_obs(0);
   EXPECT_EQ(3u, obs->sat_obs(0).sat_prn());
   EXPECT_EQ(CORSE_CODE, band.pseudo_type());
   EXPECT_DOUBLE_EQ(21000000.0, band.pseudo_range());
@@ -523,7 +689,7 @@ TEST(NovatelParserTest,
   ASSERT_EQ(1u, empty.size());
   EXPECT_EQ(0, Message<EpochObservation>(empty[0])->sat_obs_size());
   EXPECT_EQ(0u, Message<EpochObservation>(empty[0])->sat_obs_num());
-  EXPECT_EQ(3u, obs->sat_obs(0).sat_prn());  // Old snapshots stay immutable.
+  EXPECT_EQ(3u, obs->sat_obs(0).sat_prn()); // Old snapshots stay immutable.
   Put<uint32_t>(&payload, 0, UINT32_MAX);
   EXPECT_TRUE(Parse(&parser, Frame(novatel::RANGE, payload, false)).empty());
 }
@@ -560,7 +726,7 @@ TEST(NovatelParserTest, CovarianceIsEpochBoundAndAttitudeCrossTermsChangeSign) {
       Parse(&parser, Frame(novatel::INSPVAS, PvaPayload(102.0)));
   ASSERT_EQ(1u, negative.size());
   EXPECT_EQ(0, Message<Ins>(negative[0])->position_covariance_size());
-  Put(&cov, 12, 1e100);  // finite double, but not representable in float proto
+  Put(&cov, 12, 1e100); // finite double, but not representable in float proto
   EXPECT_TRUE(Parse(&parser, Frame(novatel::INSCOVS, cov)).empty());
   const auto overflow =
       Parse(&parser, Frame(novatel::INSPVAS, PvaPayload(102.0)));
@@ -573,7 +739,7 @@ TEST(NovatelParserTest, RealCaptureMatchesRecordedRatesAndPhysicalScale) {
   std::unique_ptr<bazel::tools::cpp::runfiles::Runfiles> runfiles(
       bazel::tools::cpp::runfiles::Runfiles::CreateForTest(&error));
   ASSERT_NE(nullptr, runfiles) << error;
-  const char* capture = std::getenv("NOVATEL_TEST_CAPTURE");
+  const char *capture = std::getenv("NOVATEL_TEST_CAPTURE");
   ASSERT_NE(nullptr, capture);
   const std::string path = runfiles->Rlocation(capture);
   std::ifstream input(path, std::ios::binary);
@@ -597,11 +763,11 @@ TEST(NovatelParserTest, RealCaptureMatchesRecordedRatesAndPhysicalScale) {
   double previous_raw = -1;
   double acceleration_sum = 0;
   for (size_t offset = 0; offset < bytes.size(); offset += 127) {
-    for (const auto& message : Parse(&parser, bytes.substr(offset, 127))) {
+    for (const auto &message : Parse(&parser, bytes.substr(offset, 127))) {
       ++counts[message.first];
       if (message.first == Parser::MessageType::IMU) {
         const auto imu = Message<Imu>(message);
-        const auto& acc = imu->linear_acceleration();
+        const auto &acc = imu->linear_acceleration();
         acceleration_sum += std::sqrt(acc.x() * acc.x() + acc.y() * acc.y() +
                                       acc.z() * acc.z());
         if (previous_raw > 0) {
@@ -631,7 +797,7 @@ TEST(NovatelParserTest, RealCaptureMatchesRecordedRatesAndPhysicalScale) {
               0.01);
 }
 
-}  // namespace
-}  // namespace gnss
-}  // namespace drivers
-}  // namespace apollo
+} // namespace
+} // namespace gnss
+} // namespace drivers
+} // namespace apollo

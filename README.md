@@ -11,6 +11,7 @@ umbrella module. Each directory below is a module root with its own
 | `hardware.image_decompress` / `image_decompress/` | Image-message decoder/component, independent of camera devices | `@hardware.image_decompress//:component`, `:image_decoder` |
 | `hardware.canbus` / `canbus/` | CAN transport, clients and communication primitives | `@hardware.canbus//:client`, `:factory`, `:tool` |
 | `hardware.vehicle` / `vehicle/` | Vehicle component, factory and brand protocols | `@hardware.vehicle//:component` |
+| `hardware.equipment` / `equipment/` | Independent device capabilities and RPC operation lifecycle on HAL Streams | `@hardware.equipment//:component`, `:client` |
 | `hardware.lidar` / `lidar/` | LiDAR implementations and SDK adapters | `@hardware.lidar//:hesai` |
 | `hardware.radar` / `radar/` | Radar implementations | `@hardware.radar//:conti` |
 | `hardware.gnss` / `gnss/` | GNSS streams, parsers and RTKLib | `@hardware.gnss//:component` |
@@ -50,6 +51,8 @@ hardware/
   camera_gst/camera_gst_component.cc
   canbus/can_client/
   canbus/can_comm/
+  equipment/devices/
+  equipment/protocols/can_signal/
   gnss/parser/
   hal/stream/
   image_decompress/image_decompress.cc

@@ -23,13 +23,13 @@
 #include <sys/time.h>
 #include <unistd.h>
 
+#include <linux/can.h>
+#include <linux/can/raw.h>
+
 #include <cerrno>
 #include <cstdint>
 #include <stdexcept>
 #include <string>
-
-#include <linux/can.h>
-#include <linux/can/raw.h>
 
 #include "modules/drivers/hal/stream/stream.h"
 
@@ -50,6 +50,9 @@ class CanStream : public Stream {
   // std::invalid_argument if interface name is empty or too long.
   CanStream(const std::string &address, uint32_t timeout_usec,
             bool enable_can_fd = false);
+  // Error notifications are opt-in; zero preserves the existing socket policy.
+  CanStream(const std::string &address, uint32_t timeout_usec,
+            bool enable_can_fd, can_err_mask_t error_filter);
 
   // Destructor closes the CAN socket.
   ~CanStream() override;
@@ -107,6 +110,7 @@ class CanStream : public Stream {
 
   // Flag indicating if CAN FD support is enabled for this instance.
   bool enable_can_fd_ = false;
+  can_err_mask_t error_filter_ = 0;
 };
 
 }  // namespace hal

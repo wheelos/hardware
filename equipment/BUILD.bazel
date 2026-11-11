@@ -1,0 +1,236 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("@rules_pkg//pkg:install.bzl", "pkg_install")
+load("@rules_pkg//pkg:mappings.bzl", "pkg_attributes", "pkg_filegroup", "pkg_files", "strip_prefix")
+
+package(default_visibility = ["//visibility:public"])
+
+filegroup(
+    name = "simulation_config",
+    srcs = ["conf/simulation.pb.txt"],
+)
+
+cc_library(
+    name = "device",
+    srcs = ["device.cc"],
+    hdrs = ["device.h"],
+    include_prefix = "modules/drivers/equipment",
+    strip_include_prefix = "/",
+    deps = [
+        "//proto:equipment_config_cc_proto",
+        "@wheelos_msgs//wheelos_msgs/equipment_msgs:equipment_msgs_cc_proto",
+    ],
+)
+
+cc_library(
+    name = "binary_backend",
+    hdrs = ["devices/binary_backend.h"],
+    include_prefix = "modules/drivers/equipment",
+    strip_include_prefix = "/",
+    deps = [":device"],
+)
+
+cc_library(
+    name = "binary_devices",
+    srcs = ["devices/binary_device.cc"],
+    hdrs = [
+        "devices/binary_device.h",
+        "devices/lift/lift_device.h",
+        "devices/open_close/open_close_device.h",
+        "devices/switch/switch_device.h",
+    ],
+    include_prefix = "modules/drivers/equipment",
+    strip_include_prefix = "/",
+    deps = [":binary_backend"],
+)
+
+cc_library(
+    name = "charging_backend",
+    hdrs = ["devices/charger/charging_backend.h"],
+    include_prefix = "modules/drivers/equipment",
+    strip_include_prefix = "/",
+    deps = [":device"],
+)
+
+cc_library(
+    name = "charger",
+    srcs = ["devices/charger/charger_device.cc"],
+    hdrs = [
+        "devices/charger/charger_device.h",
+    ],
+    include_prefix = "modules/drivers/equipment",
+    strip_include_prefix = "/",
+    deps = [":charging_backend"],
+)
+
+cc_library(
+    name = "can_signal_backend",
+    srcs = ["protocols/can_signal/can_signal_backend.cc"],
+    hdrs = ["protocols/can_signal/can_signal_backend.h"],
+    include_prefix = "modules/drivers/equipment",
+    strip_include_prefix = "/",
+    deps = [
+        ":binary_backend",
+        ":channel",
+    ],
+)
+
+cc_library(
+    name = "factory",
+    srcs = ["device_factory.cc"],
+    hdrs = ["device_factory.h"],
+    include_prefix = "modules/drivers/equipment",
+    strip_include_prefix = "/",
+    deps = [
+        ":binary_devices",
+        ":can_signal_backend",
+        ":charger",
+        ":simulation",
+    ],
+)
+
+cc_library(
+    name = "runtime",
+    srcs = ["equipment_runtime.cc"],
+    hdrs = ["equipment_runtime.h"],
+    include_prefix = "modules/drivers/equipment",
+    strip_include_prefix = "/",
+    deps = [
+        ":channel_registry",
+        ":factory",
+        ":operation_store",
+        "@com_google_protobuf//:protobuf",
+        "@core//cyber",
+    ],
+)
+
+cc_library(
+    name = "operation_store",
+    srcs = ["operation_store.cc"],
+    hdrs = ["operation_store.h"],
+    include_prefix = "modules/drivers/equipment",
+    strip_include_prefix = "/",
+    deps = [":device"],
+)
+
+cc_library(
+    name = "channel",
+    srcs = ["transport/channel.cc"],
+    hdrs = ["transport/channel.h"],
+    include_prefix = "modules/drivers/equipment",
+    strip_include_prefix = "/",
+    deps = [
+        ":device",
+        "@hardware.hal//stream:stream",
+    ],
+)
+
+cc_library(
+    name = "channel_registry",
+    srcs = ["transport/channel_registry.cc"],
+    hdrs = ["transport/channel_registry.h"],
+    include_prefix = "modules/drivers/equipment",
+    strip_include_prefix = "/",
+    deps = [
+        ":channel",
+        "@hardware.hal//stream:can_stream",
+        "@hardware.hal//stream:stream_factory",
+    ],
+)
+
+cc_library(
+    name = "simulation",
+    srcs = ["simulation/sim_backends.cc"],
+    hdrs = ["simulation/sim_backends.h"],
+    include_prefix = "modules/drivers/equipment",
+    strip_include_prefix = "/",
+    deps = [
+        ":binary_backend",
+        ":charging_backend",
+    ],
+)
+
+cc_library(
+    name = "client",
+    srcs = ["equipment_client.cc"],
+    hdrs = [
+        "clients/binary_client.h",
+        "clients/charging_client.h",
+        "equipment_client.h",
+    ],
+    include_prefix = "modules/drivers/equipment",
+    strip_include_prefix = "/",
+    deps = [
+        ":device",
+        "@core//cyber",
+    ],
+)
+
+cc_library(
+    name = "service",
+    srcs = ["equipment_service.cc"],
+    hdrs = ["equipment_service.h"],
+    include_prefix = "modules/drivers/equipment",
+    strip_include_prefix = "/",
+    deps = [
+        ":runtime",
+        "@core//cyber",
+    ],
+)
+
+cc_library(
+    name = "component_lib",
+    srcs = ["equipment_component.cc"],
+    hdrs = ["equipment_component.h"],
+    include_prefix = "modules/drivers/equipment",
+    strip_include_prefix = "/",
+    deps = [
+        ":service",
+        "@core//cyber",
+    ],
+    alwayslink = True,
+)
+
+cc_binary(
+    name = "libequipment_component.so",
+    linkshared = True,
+    linkstatic = False,
+    deps = [":component_lib"],
+)
+
+alias(
+    name = "component",
+    actual = ":libequipment_component.so",
+)
+
+pkg_files(
+    name = "package_files_data",
+    srcs = glob([
+        "conf/*.txt",
+        "dag/*.dag",
+    ]),
+    attributes = pkg_attributes(mode = "0644"),
+    prefix = "drivers/addition_data/equipment",
+    strip_prefix = strip_prefix.from_root(""),
+)
+
+pkg_files(
+    name = "package_files_libraries",
+    srcs = [":libequipment_component.so"],
+    attributes = pkg_attributes(mode = "0755"),
+    prefix = "drivers/lib/equipment",
+    strip_prefix = strip_prefix.from_root(""),
+)
+
+pkg_filegroup(
+    name = "package_files",
+    srcs = [
+        ":package_files_data",
+        ":package_files_libraries",
+    ],
+)
+
+pkg_install(
+    name = "install_dir",
+    srcs = [":package_files"],
+    tags = ["manual"],
+)

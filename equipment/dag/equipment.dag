@@ -1,0 +1,10 @@
+module_config {
+  module_library: "drivers/lib/equipment/libequipment_component.so"
+  components {
+    class_name: "apollo::drivers::equipment::EquipmentComponent"
+    config {
+      name: "equipment"
+      config_file_path: "drivers/addition_data/equipment/conf/equipment_conf.pb.txt"
+    }
+  }
+}

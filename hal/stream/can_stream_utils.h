@@ -6,17 +6,24 @@
 #pragma once
 
 #include <fcntl.h>
+#include <sys/socket.h>
+
+#include <linux/can.h>
+#include <linux/can/raw.h>
 
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 
-#include <linux/can.h>
-
 namespace apollo {
 namespace drivers {
 namespace hal {
 namespace internal {
+
+inline int SetCanSocketErrorFilter(int fd, can_err_mask_t filter) {
+  return setsockopt(fd, SOL_CAN_RAW, CAN_RAW_ERR_FILTER, &filter,
+                    sizeof(filter));
+}
 
 inline int SetCanSocketNonBlocking(int fd) {
   const int flags = fcntl(fd, F_GETFL, 0);

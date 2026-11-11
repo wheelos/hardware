@@ -1,0 +1,26 @@
+service_root: "/equipment_sim"
+max_operations: 64
+result_retention_ms: 60000
+max_execution_timeout_ms: 10000
+shutdown_timeout_ms: 1000
+devices {
+  device_id: "sim_switch"
+  device_type: "switch"
+  model: "sim"
+  state_max_age_ms: 1000
+  poll_interval_ms: 5
+}
+devices {
+  device_id: "sim_lift"
+  device_type: "lift"
+  model: "sim"
+  state_max_age_ms: 1000
+  poll_interval_ms: 5
+}
+devices {
+  device_id: "sim_charger"
+  device_type: "charger"
+  model: "sim"
+  state_max_age_ms: 1000
+  poll_interval_ms: 5
+}

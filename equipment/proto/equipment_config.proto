@@ -1,0 +1,85 @@
+syntax = "proto2";
+package apollo.drivers.equipment;
+
+import "google/protobuf/any.proto";
+
+message CanEndpoint {
+  optional string interface_name = 1;
+  optional bool enable_can_fd = 2 [default = false];
+}
+message SerialEndpoint {
+  optional string device = 1;
+  optional uint32 baud_rate = 2;
+}
+message NetworkEndpoint {
+  optional string address = 1;
+  optional uint32 port = 2;
+}
+message StreamConfig {
+  optional uint32 timeout_usec = 1;
+  oneof endpoint {
+    CanEndpoint can = 2;
+    SerialEndpoint serial = 3;
+    NetworkEndpoint tcp = 4;
+    NetworkEndpoint udp = 5;
+  }
+}
+message ChannelConfig {
+  optional string channel_id = 1;
+  optional StreamConfig stream = 2;
+  optional uint32 poll_interval_ms = 3 [default = 2];
+  optional uint32 receive_queue_capacity = 4 [default = 64];
+  // Shared byte streams require complete, bounded protocol transactions.
+  optional string transaction_protocol = 5;
+}
+message DeviceBinding {
+  optional string name = 1;
+  optional string channel_id = 2;
+  optional google.protobuf.Any address = 3;
+}
+message CanSignalAddress {
+  optional uint32 command_id = 1;
+  optional uint32 feedback_id = 2;
+  optional bool extended_id = 3 [default = false];
+  optional bool requires_can_fd = 4 [default = false];
+}
+// Static payload mapping only; no counters, CRC, or periodic control.
+message CanSignalConfig {
+  reserved 1, 2, 3;
+  reserved "command_id", "feedback_id", "extended_id";
+  optional bytes positive_command = 4;
+  optional bytes negative_command = 5;
+  optional bytes stop_command = 6;
+  optional uint32 positive_limit_bit = 7;
+  optional uint32 negative_limit_bit = 8;
+  optional uint32 moving_bit = 9;
+  optional uint32 fault_bit = 10;
+  optional uint32 feedback_length = 11;
+}
+message SimulationConfig {
+  optional bool initial_positive = 1 [default = false];
+  optional uint32 transition_delay_ms = 2 [default = 20];
+  optional bool fault_on_command = 3 [default = false];
+  optional bool freeze_after_command = 4 [default = false];
+}
+message DeviceConfig {
+  optional string device_id = 1;
+  optional string device_type = 2;
+  reserved 3;
+  reserved "stream";
+  optional uint32 state_max_age_ms = 4;
+  optional uint32 poll_interval_ms = 5;
+  optional string model = 6;
+  optional string capability_id = 7 [default = "main"];
+  optional google.protobuf.Any model_config = 8;
+  repeated DeviceBinding bindings = 9;
+}
+message EquipmentModuleConfig {
+  optional string service_root = 1 [default = "/equipment"];
+  repeated DeviceConfig devices = 2;
+  optional uint32 max_operations = 3;
+  optional uint64 result_retention_ms = 4;
+  optional uint32 max_execution_timeout_ms = 5;
+  optional uint32 shutdown_timeout_ms = 6;
+  repeated ChannelConfig channels = 7;
+}

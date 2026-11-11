@@ -1,0 +1,7 @@
+# Add a verified device profile before starting; empty inventories are rejected.
+# These are runtime bookkeeping limits, not a physical device timing profile.
+service_root: "/equipment"
+max_operations: 1024
+result_retention_ms: 60000
+max_execution_timeout_ms: 60000
+shutdown_timeout_ms: 1000

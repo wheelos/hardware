@@ -17,6 +17,8 @@
 
 #include "modules/drivers/hal/stream/can_stream.h"
 
+#include <string>
+
 #include "cyber/cyber.h"
 #include "modules/drivers/hal/stream/can_stream_utils.h"
 
@@ -29,10 +31,15 @@ namespace hal {
 // long.
 CanStream::CanStream(const std::string &address, uint32_t timeout_usec,
                      bool enable_can_fd)
+    : CanStream(address, timeout_usec, enable_can_fd, 0) {}
+
+CanStream::CanStream(const std::string &address, uint32_t timeout_usec,
+                     bool enable_can_fd, can_err_mask_t error_filter)
     : interface_name_(address),
       timeout_usec_(timeout_usec),
       fd_(-1),
-      enable_can_fd_(enable_can_fd) {
+      enable_can_fd_(enable_can_fd),
+      error_filter_(error_filter) {
   if (interface_name_.empty()) {
     throw std::invalid_argument("CAN interface name cannot be empty.");
   }
@@ -74,6 +81,13 @@ void CanStream::open() {
     fd_ = -1;
     last_errno_ = error_code;
   };
+  if (error_filter_ != 0 &&
+      internal::SetCanSocketErrorFilter(fd_, error_filter_) < 0) {
+    const int error_code = errno;
+    cleanup(error_code);
+    throw std::runtime_error("Failed to enable CAN error frames: " +
+                             std::string(strerror(error_code)));
+  }
 
   // 2. Enable CAN FD support if requested
   if (enable_can_fd_) {

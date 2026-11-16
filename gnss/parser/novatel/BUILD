@@ -42,5 +42,6 @@ cc_test(
         ":novatel_parser",
         "@bazel_tools//tools/cpp/runfiles",
         "@com_google_googletest//:gtest_main",
+        "@wheelos_common//modules/common/util:time_conversion",
     ],
 )

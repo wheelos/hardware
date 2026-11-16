@@ -31,6 +31,7 @@
 #include "absl/strings/str_split.h"
 
 #include "cyber/common/log.h"
+#include "modules/common/util/time_conversion.h"
 #include "modules/common/util/util.h"
 #include "modules/drivers/gnss/util/util.h"
 
@@ -866,8 +867,8 @@ void HuaceParser::FillGnssBestpos(const huace::GPCHCX& gpchcx,
   // ParseGPCHC/ParseGPCHCX even if they were not explicitly in the original
   // GPCHC definition (e.g., std deviations). This might require checking items
   // vector size in ParseGPCHC and assigning defaults if fields are missing.
-  bestpos->set_measurement_time(gpchcx.gps_week * kSecondsPerWeek +
-                                gpchcx.seconds_in_gps_week);
+  bestpos->set_measurement_time(apollo::common::util::GpsToUnixSeconds(
+      gpchcx.gps_week * kSecondsPerWeek + gpchcx.seconds_in_gps_week));
   // Use mapping helpers
   bestpos->set_sol_status(ToSolutionStatus(gpchcx.status.get_system_status()));
   bestpos->set_sol_type(ToSolutionType(gpchcx.status.get_satellite_status()));
@@ -889,8 +890,8 @@ void HuaceParser::FillGnssBestpos(const huace::GPCHCX& gpchcx,
 }
 
 void HuaceParser::FillImu(const huace::GPCHCX& gpchcx, Imu* imu) {
-  imu->set_measurement_time(gpchcx.gps_week * kSecondsPerWeek +
-                            gpchcx.seconds_in_gps_week);
+  imu->set_measurement_time(apollo::common::util::GpsToUnixSeconds(
+      gpchcx.gps_week * kSecondsPerWeek + gpchcx.seconds_in_gps_week));
 
   Point3D* linear_acceleration = imu->mutable_linear_acceleration();
   // Ensure correct coordinate transform (RFU to FLU)
@@ -905,8 +906,8 @@ void HuaceParser::FillImu(const huace::GPCHCX& gpchcx, Imu* imu) {
 }
 
 void HuaceParser::FillHeading(const huace::GPCHCX& gpchcx, Heading* heading) {
-  heading->set_measurement_time(gpchcx.gps_week * kSecondsPerWeek +
-                                gpchcx.seconds_in_gps_week);
+  heading->set_measurement_time(apollo::common::util::GpsToUnixSeconds(
+      gpchcx.gps_week * kSecondsPerWeek + gpchcx.seconds_in_gps_week));
   heading->set_solution_status(
       ToSolutionStatus(gpchcx.status.get_system_status()));
   heading->set_position_type(
@@ -925,12 +926,8 @@ void HuaceParser::FillHeading(const huace::GPCHCX& gpchcx, Heading* heading) {
 }
 
 void HuaceParser::FillIns(const huace::GPCHCX& gpchcx, Ins* ins) {
-  // FIX: Use GPS time for Protobuf header timestamp as well
-  double gps_time_sec =
-      gpchcx.gps_week * kSecondsPerWeek + gpchcx.seconds_in_gps_week;
-  ins->mutable_header()->set_timestamp_sec(gps_time_sec);  // Use sensor time
-
-  ins->set_measurement_time(gps_time_sec);
+  ins->set_measurement_time(apollo::common::util::GpsToUnixSeconds(
+      gpchcx.gps_week * kSecondsPerWeek + gpchcx.seconds_in_gps_week));
 
   // Map SolutionType to Ins::Type
   SolutionType solution_type =
@@ -995,6 +992,8 @@ void HuaceParser::FillIns(const huace::GPCHCX& gpchcx, Ins* ins) {
 }
 
 void HuaceParser::FillInsStat(const huace::GPCHCX& gpchcx, InsStat* ins_stat) {
+  ins_stat->set_measurement_time(apollo::common::util::GpsToUnixSeconds(
+      gpchcx.gps_week * kSecondsPerWeek + gpchcx.seconds_in_gps_week));
   ins_stat->set_ins_status(
       static_cast<uint32_t>(gpchcx.status.get_system_status()));
 

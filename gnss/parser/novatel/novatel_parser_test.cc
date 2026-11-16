@@ -27,6 +27,7 @@
 
 #include "tools/cpp/runfiles/runfiles.h"
 #include "gtest/gtest.h"
+#include "modules/common/util/time_conversion.h"
 
 namespace apollo {
 namespace drivers {
@@ -141,8 +142,9 @@ TEST(NovatelParserTest, PayloadTimedLogsParseWithInvalidHeaderTime) {
       Parse(&raw_parser, invalid_header(novatel::RAWIMUSX, raw_payload));
   ASSERT_EQ(1u, raw.size());
   ASSERT_EQ(Parser::MessageType::IMU, raw[0].first);
-  EXPECT_DOUBLE_EQ(kPayloadWeek * 604800.0 + kPayloadSeconds,
-                   Message<Imu>(raw[0])->measurement_time());
+  EXPECT_DOUBLE_EQ(
+      common::util::GpsToUnixSeconds(kPayloadWeek * 604800.0 + kPayloadSeconds),
+      Message<Imu>(raw[0])->measurement_time());
 
   auto corr_payload = CorrPayload(kPayloadSeconds);
   Put<uint32_t>(&corr_payload, 0, kPayloadWeek);
@@ -153,8 +155,9 @@ TEST(NovatelParserTest, PayloadTimedLogsParseWithInvalidHeaderTime) {
       Parse(&corr_parser, invalid_header(novatel::CORRIMUDATA, corr_payload));
   ASSERT_EQ(1u, corrected.size());
   ASSERT_EQ(Parser::MessageType::CORRECTED_IMU, corrected[0].first);
-  EXPECT_DOUBLE_EQ(kPayloadWeek * 604800.0 + kPayloadSeconds,
-                   Message<Ins>(corrected[0])->measurement_time());
+  EXPECT_DOUBLE_EQ(
+      common::util::GpsToUnixSeconds(kPayloadWeek * 604800.0 + kPayloadSeconds),
+      Message<Ins>(corrected[0])->measurement_time());
   EXPECT_NEAR(5.0, Message<Ins>(corrected[0])->linear_acceleration().x(),
               1e-12);
   EXPECT_NEAR(-4.0, Message<Ins>(corrected[0])->linear_acceleration().y(),
@@ -168,8 +171,9 @@ TEST(NovatelParserTest, PayloadTimedLogsParseWithInvalidHeaderTime) {
   ASSERT_EQ(1u, pva.size());
   ASSERT_EQ(Parser::MessageType::INS, pva[0].first);
   const auto ins = Message<Ins>(pva[0]);
-  EXPECT_DOUBLE_EQ(kPayloadWeek * 604800.0 + kPayloadSeconds,
-                   ins->measurement_time());
+  EXPECT_DOUBLE_EQ(
+      common::util::GpsToUnixSeconds(kPayloadWeek * 604800.0 + kPayloadSeconds),
+      ins->measurement_time());
   EXPECT_DOUBLE_EQ(37.0, ins->position().lat());
   EXPECT_DOUBLE_EQ(-122.0, ins->position().lon());
   EXPECT_DOUBLE_EQ(3.0, ins->linear_velocity().x());
@@ -261,6 +265,13 @@ TEST(NovatelParserTest, ParsesHeaderTimedStatusesWithoutInventingTime) {
   ASSERT_EQ(Parser::MessageType::INS_STAT, ins_status[0].first);
   EXPECT_EQ(1u, Message<InsStat>(ins_status[0])->ins_status());
   EXPECT_FALSE(Message<InsStat>(ins_status[0])->header().has_timestamp_sec());
+  const auto timed_ins_status = Parse(
+      &ins_status_parser,
+      Frame(novatel::INSPVAX, ins_status_payload, true, 100000, 2200, 200));
+  ASSERT_EQ(1u, timed_ins_status.size());
+  EXPECT_DOUBLE_EQ(
+      common::util::GpsToUnixSeconds(2200.0 * 604800 + 100),
+      Message<InsStat>(timed_ins_status[0])->measurement_time());
 
   std::string heading_payload(44, '\0');
   NovatelParser heading_parser;
@@ -291,6 +302,9 @@ TEST(NovatelParserTest, ParsesHeaderTimedStatusesWithoutInventingTime) {
             invalid_header(novatel::BESTGNSSPOS, position_payload, 2200, 200));
   ASSERT_EQ(2u, satellite_time.size());
   EXPECT_TRUE(Message<GnssBestPose>(satellite_time[0])->has_measurement_time());
+  EXPECT_DOUBLE_EQ(
+      common::util::GpsToUnixSeconds(2200.0 * 604800 + 100),
+      Message<GnssBestPose>(satellite_time[0])->measurement_time());
 }
 
 TEST(NovatelParserTest, RawImuWireTypeUnitsFramesAndFragmentation) {
@@ -308,7 +322,8 @@ TEST(NovatelParserTest, RawImuWireTypeUnitsFramesAndFragmentation) {
     ASSERT_EQ(Parser::MessageType::IMU, messages[0].first);
     const auto imu = Message<Imu>(messages[0]);
     ASSERT_NE(nullptr, imu);
-    EXPECT_DOUBLE_EQ(2200.0 * 604800 + 100, imu->measurement_time());
+    EXPECT_DOUBLE_EQ(common::util::GpsToUnixSeconds(2200.0 * 604800 + 100),
+                     imu->measurement_time());
     EXPECT_NEAR(0.005, imu->measurement_span(), 1e-9);
     EXPECT_DOUBLE_EQ(mapping == 5 ? 2.0 : 4.0, imu->linear_acceleration().x());
     EXPECT_DOUBLE_EQ(mapping == 5 ? -4.0 : -2.0,
@@ -423,11 +438,13 @@ TEST(NovatelParserTest, GpsWeekRolloverAndLargeWeeksDoNotOverflow) {
   Put<uint16_t>(&rollover, 2, 2201);
   const auto next = Parse(&parser, Frame(novatel::RAWIMUSX, rollover));
   ASSERT_EQ(1u, next.size());
-  EXPECT_DOUBLE_EQ(2201.0 * 604800, Message<Imu>(next[0])->measurement_time());
+  EXPECT_DOUBLE_EQ(
+      common::util::GpsToUnixSeconds(2201.0 * 604800),
+      Message<Imu>(next[0])->measurement_time());
   Put<uint16_t>(&rollover, 2, 5000);
   const auto future = Parse(&parser, Frame(novatel::RAWIMUSX, rollover));
   ASSERT_EQ(1u, future.size());
-  EXPECT_DOUBLE_EQ(5000.0 * 604800,
+  EXPECT_DOUBLE_EQ(common::util::GpsToUnixSeconds(5000.0 * 604800),
                    Message<Imu>(future[0])->measurement_time());
 }
 

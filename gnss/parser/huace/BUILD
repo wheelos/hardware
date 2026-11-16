@@ -21,6 +21,7 @@ cc_library(
         "@com_google_absl//absl/types:span",
         "@core//cyber",
         "@wheelos_common//modules/common/util",
+        "@wheelos_common//modules/common/util:time_conversion",
         "@wheelos_msgs//wheelos_msgs/basic_msgs:pnc_point_cc_proto",
         "@wheelos_msgs//wheelos_msgs/sensor_msgs:gnss_best_pose_cc_proto",
         "@wheelos_msgs//wheelos_msgs/sensor_msgs:heading_cc_proto",

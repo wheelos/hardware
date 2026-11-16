@@ -25,6 +25,7 @@
 #include "wheelos_msgs/sensor_msgs/ins.pb.h"
 
 #include "cyber/common/log.h"
+#include "modules/common/util/time_conversion.h"
 #include "modules/common/util/util.h"
 #include "modules/drivers/gnss/util/util.h"
 
@@ -140,8 +141,8 @@ SolutionType ToSolutionType(SatelliteStatus sat_status) {
 }
 
 void FillGnssBestpos(const forsense::GPYJ& gpyj, GnssBestPose* bestpos) {
-  bestpos->set_measurement_time(gpyj.gps_week * kSecondsPerWeek +
-                                gpyj.gps_time);
+  bestpos->set_measurement_time(apollo::common::util::GpsToUnixSeconds(
+      gpyj.gps_week * kSecondsPerWeek + gpyj.gps_time));
   // Use mapping helpers
   bestpos->set_sol_status(ToSolutionStatus(gpyj.status.get_system_status()));
   bestpos->set_sol_type(ToSolutionType(gpyj.status.get_satellite_status()));
@@ -158,7 +159,8 @@ void FillGnssBestpos(const forsense::GPYJ& gpyj, GnssBestPose* bestpos) {
 }
 
 void FillImu(const forsense::GPYJ& gpyj, Imu* imu) {
-  imu->set_measurement_time(gpyj.gps_week * kSecondsPerWeek + gpyj.gps_time);
+  imu->set_measurement_time(apollo::common::util::GpsToUnixSeconds(
+      gpyj.gps_week * kSecondsPerWeek + gpyj.gps_time));
 
   apollo::common::Point3D* linear_acceleration =
       imu->mutable_linear_acceleration();
@@ -174,8 +176,8 @@ void FillImu(const forsense::GPYJ& gpyj, Imu* imu) {
 }
 
 void FillHeading(const forsense::GPYJ& gpyj, Heading* heading) {
-  heading->set_measurement_time(gpyj.gps_week * kSecondsPerWeek +
-                                gpyj.gps_time);
+  heading->set_measurement_time(apollo::common::util::GpsToUnixSeconds(
+      gpyj.gps_week * kSecondsPerWeek + gpyj.gps_time));
   heading->set_solution_status(
       ToSolutionStatus(gpyj.status.get_system_status()));
   heading->set_position_type(
@@ -188,11 +190,8 @@ void FillHeading(const forsense::GPYJ& gpyj, Heading* heading) {
 }
 
 void FillIns(const forsense::GPYJ& gpyj, Ins* ins) {
-  // FIX: Use GPS time for Protobuf header timestamp as well
-  double gps_time_sec = gpyj.gps_week * kSecondsPerWeek + gpyj.gps_time;
-  ins->mutable_header()->set_timestamp_sec(gps_time_sec);  // Use sensor time
-
-  ins->set_measurement_time(gps_time_sec);
+  ins->set_measurement_time(apollo::common::util::GpsToUnixSeconds(
+      gpyj.gps_week * kSecondsPerWeek + gpyj.gps_time));
 
   // Map SolutionType to Ins::Type
   SolutionType solution_type =
@@ -254,6 +253,8 @@ void FillIns(const forsense::GPYJ& gpyj, Ins* ins) {
 }
 
 void FillInsStat(const forsense::GPYJ& gpyj, InsStat* ins_stat) {
+  ins_stat->set_measurement_time(apollo::common::util::GpsToUnixSeconds(
+      gpyj.gps_week * kSecondsPerWeek + gpyj.gps_time));
   ins_stat->set_ins_status(
       static_cast<uint32_t>(gpyj.status.get_system_status()));
 }

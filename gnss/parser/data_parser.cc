@@ -29,7 +29,6 @@
 #include "modules/common/adapters/adapter_gflags.h"
 #include "modules/common/util/message_util.h"
 #include "modules/common/util/proj_helper.h"
-#include "modules/common/util/time_conversion.h"
 #include "modules/drivers/gnss/parser/parser_factory.h"
 #include "modules/drivers/gnss/util/util.h"
 
@@ -40,14 +39,19 @@ namespace gnss {
 using ::apollo::localization::CorrectedImu;
 using ::apollo::localization::Gps;
 
-using apollo::common::util::GpsToUnixSeconds;
-
 namespace {
 
 // Using EPSG:4326 for WGS84 geographic is standard.
 // Alternatively, could use "+proj=latlong +ellps=WGS84 +datum=WGS84" with
 // proj_create
 const char *WGS84_TEXT = "EPSG:4326";
+
+template <typename Message>
+bool HasValidMeasurementTime(const Message &message) {
+  return message.has_measurement_time() &&
+         std::isfinite(message.measurement_time()) &&
+         message.measurement_time() > 0;
+}
 
 } // namespace
 
@@ -264,12 +268,11 @@ void DataParser::PublishInsStat(const Parser::ProtoMessagePtr &msg_ptr) {
     AERROR << "Failed to cast message to InsStat";
     return;
   }
-  const bool has_event_time = ins_stat_ptr->header().has_timestamp_sec();
-  const double event_time = ins_stat_ptr->header().timestamp_sec();
-  common::util::FillHeader("gnss", ins_stat_ptr.get());
-  if (has_event_time) {
-    ins_stat_ptr->mutable_header()->set_timestamp_sec(event_time);
+  if (!HasValidMeasurementTime(*ins_stat_ptr)) {
+    AERROR << "Cannot publish INS status without a valid measurement time";
+    return;
   }
+  common::util::FillHeader("gnss", ins_stat_ptr.get());
   insstat_writer_->Write(ins_stat_ptr);
 }
 
@@ -280,13 +283,13 @@ void DataParser::PublishBestpos(const Parser::ProtoMessagePtr &msg_ptr) {
     AERROR << "Failed to cast message to GnssBestPose";
     return;
   }
+  if (!HasValidMeasurementTime(*bestpos_ptr)) {
+    AERROR
+        << "Cannot publish GNSS best position without a valid measurement time";
+    return;
+  }
   // Create message directly and publish
   common::util::FillHeader("gnss", bestpos_ptr.get());
-  if (config_.data().format() == config::Stream::NOVATEL_BINARY &&
-      bestpos_ptr->has_measurement_time()) {
-    bestpos_ptr->mutable_header()->set_timestamp_sec(
-        GpsToUnixSeconds(bestpos_ptr->measurement_time()));
-  }
   gnssbestpose_writer_->Write(bestpos_ptr);
 }
 
@@ -296,12 +299,14 @@ void DataParser::PublishImu(const Parser::ProtoMessagePtr &msg_ptr) {
     AERROR << "Failed to cast message to Imu";
     return;
   }
+  if (!HasValidMeasurementTime(*imu_in)) {
+    AERROR << "Cannot publish IMU without a valid measurement time";
+    return;
+  }
   auto raw_imu_out = std::make_shared<Imu>(*imu_in);
   if (config_.data().format() == config::Stream::NOVATEL_BINARY) {
     // NovatelParser already returns FLU, as required by sensor_msgs/imu.proto.
     common::util::FillHeader("gnss", raw_imu_out.get());
-    raw_imu_out->mutable_header()->set_timestamp_sec(
-        GpsToUnixSeconds(imu_in->measurement_time()));
     rawimu_writer_->Write(raw_imu_out);
     return;
   }
@@ -321,7 +326,7 @@ void DataParser::PublishImu(const Parser::ProtoMessagePtr &msg_ptr) {
       imu_in->angular_velocity().z());
 
   common::util::FillHeader("gnss", raw_imu_out.get());
-  rawimu_writer_->Write(raw_imu_out); // Using shared_ptr for created message
+  rawimu_writer_->Write(raw_imu_out);
 }
 
 void DataParser::PublishOdometry(const Parser::ProtoMessagePtr &msg_ptr) {
@@ -331,16 +336,16 @@ void DataParser::PublishOdometry(const Parser::ProtoMessagePtr &msg_ptr) {
     return;
   }
   if (!ins->has_position() || !ins->has_euler_angles() ||
-      !ins->has_measurement_time()) {
+      !HasValidMeasurementTime(*ins)) {
     AERROR << "Cannot publish odometry without a timed PVA solution";
     return;
   }
   // Create a *new* Gps message (used for Odometry topic in Apollo)
   auto gps = std::make_shared<Gps>();
 
-  double unix_sec = GpsToUnixSeconds(ins->measurement_time());
+  const double measurement_time = ins->measurement_time();
   common::util::FillHeader("gnss", gps.get());
-  gps->mutable_header()->set_timestamp_sec(unix_sec);
+  gps->set_measurement_time(measurement_time);
   auto *gps_msg = gps->mutable_localization();
 
   // 1. pose xyz (WGS84 to UTM transformation)
@@ -385,11 +390,15 @@ void DataParser::PublishCorrimu(const Parser::ProtoMessagePtr &msg_ptr) {
     AERROR << "Failed to cast message to Ins for Corrimu";
     return;
   }
+  if (!HasValidMeasurementTime(*ins)) {
+    AERROR << "Cannot publish corrected IMU without a valid measurement time";
+    return;
+  }
   // Create a *new* CorrectedImu message
   auto imu = std::make_shared<CorrectedImu>();
-  double unix_sec = GpsToUnixSeconds(ins->measurement_time());
+  const double measurement_time = ins->measurement_time();
   common::util::FillHeader("gnss", imu.get());
-  imu->mutable_header()->set_timestamp_sec(unix_sec);
+  imu->set_measurement_time(measurement_time);
 
   auto *imu_msg = imu->mutable_imu();
 
@@ -442,13 +451,12 @@ void DataParser::PublishHeading(const Parser::ProtoMessagePtr &msg_ptr) {
     AERROR << "Failed to cast message to Heading";
     return;
   }
+  if (!HasValidMeasurementTime(*heading_ptr)) {
+    AERROR << "Cannot publish heading without a valid measurement time";
+    return;
+  }
   // Create message directly and publish
   common::util::FillHeader("gnss", heading_ptr.get());
-  if (config_.data().format() == config::Stream::NOVATEL_BINARY &&
-      heading_ptr->has_measurement_time()) {
-    heading_ptr->mutable_header()->set_timestamp_sec(
-        GpsToUnixSeconds(heading_ptr->measurement_time()));
-  }
   heading_writer_->Write(heading_ptr); // Use const& overload
 }
 

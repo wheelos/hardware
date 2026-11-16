@@ -532,7 +532,7 @@ bool NovatelParser::HandleGnssBestpos(const novatel::BestPos *pos,
   if (header_time_valid) {
     double seconds =
         static_cast<double>(gps_week) * kSecondsPerWeek + gps_millisecs * 1e-3;
-    bestpos_.set_measurement_time(seconds);
+    bestpos_.set_measurement_time(GpsToUnixSeconds(seconds));
   }
 
   return true;
@@ -617,7 +617,7 @@ bool NovatelParser::HandleBestPos(const novatel::BestPos *pos,
   if (header_time_valid) {
     double seconds =
         static_cast<double>(gps_week) * kSecondsPerWeek + gps_millisecs * 1e-3;
-    gnss_.set_measurement_time(seconds);
+    gnss_.set_measurement_time(GpsToUnixSeconds(seconds));
   }
   return true;
 }
@@ -647,7 +647,7 @@ bool NovatelParser::HandleBestVel(const novatel::BestVel *vel,
   if (header_time_valid) {
     double seconds =
         static_cast<double>(gps_week) * kSecondsPerWeek + gps_millisecs * 1e-3;
-    gnss_.set_measurement_time(seconds);
+    gnss_.set_measurement_time(GpsToUnixSeconds(seconds));
   }
   return true;
 }
@@ -694,7 +694,7 @@ bool NovatelParser::HandleCorrImuData(const novatel::CorrImuData *imu,
                corrimu_.mutable_linear_acceleration());
   z_rot_90_ccw(imu->x_angle_change * rate, imu->y_angle_change * rate,
                imu->z_angle_change * rate, corrimu_.mutable_angular_velocity());
-  corrimu_.set_measurement_time(seconds);
+  corrimu_.set_measurement_time(GpsToUnixSeconds(seconds));
   corrimu_time_previous_ = seconds;
   return true;
 }
@@ -768,7 +768,7 @@ bool NovatelParser::HandleInsPva(const novatel::InsPva *pva) {
 
   double seconds =
       static_cast<double>(pva->gps_week) * kSecondsPerWeek + pva->gps_seconds;
-  ins_.set_measurement_time(seconds);
+  ins_.set_measurement_time(GpsToUnixSeconds(seconds));
   // Never label a covariance from another epoch as belonging to this PVA.
   if (ins_cov_ && ins_cov_->gps_week == pva->gps_week &&
       std::abs(ins_cov_->gps_seconds - pva->gps_seconds) < 1e-6) {
@@ -797,7 +797,7 @@ bool NovatelParser::HandleInsPvax(const novatel::InsPvaX *pvax,
   if (header_time_valid) {
     double seconds =
         static_cast<double>(gps_week) * kSecondsPerWeek + gps_millisecs * 1e-3;
-    ins_stat_.mutable_header()->set_timestamp_sec(GpsToUnixSeconds(seconds));
+    ins_stat_.set_measurement_time(GpsToUnixSeconds(seconds));
   }
   ins_stat_.set_ins_status(pvax->ins_status);
   ins_stat_.set_pos_type(pvax->pos_type);
@@ -879,7 +879,7 @@ bool NovatelParser::DecodeRawImu(const novatel::RawImu &imu,
   }
 
   imu_.Clear();
-  imu_.set_measurement_time(time);
+  imu_.set_measurement_time(GpsToUnixSeconds(time));
   imu_.set_measurement_span(imu_measurement_span);
   switch (imu_frame_mapping_) {
   case 5: // Default mapping.
@@ -1109,7 +1109,7 @@ bool NovatelParser::HandleHeading(const novatel::Heading *heading,
   if (header_time_valid) {
     double seconds =
         static_cast<double>(gps_week) * kSecondsPerWeek + gps_millisecs * 1e-3;
-    heading_.set_measurement_time(seconds);
+    heading_.set_measurement_time(GpsToUnixSeconds(seconds));
   }
   return true;
 }

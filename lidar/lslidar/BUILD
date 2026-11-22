@@ -2,19 +2,6 @@ load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 
 package(default_visibility = ["//visibility:public"])
 
-# install(
-#     name = "install",
-#     data = [
-#         ":runtime_data",
-#     ],
-#     data_dest = "drivers/addition_data/lidar/lslidar",
-#     library_dest = "drivers/lib/lidar/lslidar",
-#     targets = [
-#         "//lslidar/driver:liblslidar_driver_component.so",
-#         "//lslidar/parser:liblslidar_convert_component.so",
-#     ],
-# )
-
 filegroup(
     name = "runtime_data",
     srcs = glob([

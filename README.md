@@ -88,15 +88,14 @@ It has no
 dependency on transform, any functional hardware module, or the product.
 Camera-only consumers therefore do not resolve `wheelos_transform`.
 
-The product's runtime installation uses Bazel-maintained `rules_pkg`:
-`pkg_install` installs a directory explicitly and `pkg_tar` produces an archive.
-Modules declare `pkg_files`/`pkg_filegroup` mappings and explicit `install_dir`
-targets directly from `rules_pkg`, while product runtime assembly uses Core's
-`//runtime` rules to validate and materialize `bin/`, `lib/`, `conf/`, `dag/`,
-and `launch/` layouts with software-root-relative references. The legacy
-`install()` interface, custom provider, templates and forwarding layers have
-been removed. Runtime dependency collection belongs to product runtime assembly,
-not module SDK file mappings.
+Product runtime assembly uses Core's `runtime_product`, `runtime_module`, and
+`runtime_resources` rules to validate and materialize `bin/`, `lib/`, `conf/`,
+`dag/`, and `launch/` layouts with software-root-relative references. Module
+SDK targets use `rules_pkg` file mappings, and every module `install_dir`
+delegates to Core's `@core//runtime:install.bzl` `pkg_install` implementation.
+This keeps module installation on Core's runfiles-aware path while leaving
+runtime dependency collection to product assembly. No module-local installer
+rule or parallel installation provider is maintained.
 C++ lint is an explicit command/review operation, not a Bazel build target;
 consumers retain their own lint configuration.
 

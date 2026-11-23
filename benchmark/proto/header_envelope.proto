@@ -1,0 +1,12 @@
+syntax = "proto2";
+
+package apollo.drivers.benchmark;
+
+import "wheelos_msgs/basic_msgs/header.proto";
+
+// Partial envelope matching field 1 (apollo.common.Header) on standard WheelOS
+// sensor messages so raw channel probes can inspect timestamps and sequence
+// numbers without compiling every brand-specific message schema.
+message HeaderEnvelope {
+  optional apollo.common.Header header = 1;
+}

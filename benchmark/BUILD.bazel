@@ -1,0 +1,68 @@
+load("@core//runtime:install.bzl", "pkg_install")
+load("@core//runtime:runtime.bzl", "runtime_module")
+load("@rules_pkg//pkg:mappings.bzl", "pkg_attributes", "pkg_filegroup", "pkg_files", "strip_prefix")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files(["CPPLINT.cfg"])
+
+alias(
+    name = "wheelos-sensor-bench",
+    actual = "//cli:wheelos-sensor-bench",
+)
+
+alias(
+    name = "cyber_channel_probe",
+    actual = "//probe:cyber_channel_probe",
+)
+
+alias(
+    name = "alloc_probe",
+    actual = "//probe:libwheelos_alloc_probe.so",
+)
+
+pkg_files(
+    name = "package_files_binaries",
+    srcs = [
+        "//cli:wheelos-sensor-bench",
+        "//probe:cyber_channel_probe",
+    ],
+    attributes = pkg_attributes(mode = "0755"),
+    include_runfiles = True,
+    prefix = "drivers/bin/benchmark",
+    strip_prefix = strip_prefix.files_only(),
+)
+
+pkg_files(
+    name = "package_files_libraries",
+    srcs = ["//probe:libwheelos_alloc_probe.so"],
+    attributes = pkg_attributes(mode = "0755"),
+    prefix = "drivers/lib/benchmark",
+    strip_prefix = strip_prefix.files_only(),
+)
+
+pkg_filegroup(
+    name = "package_files",
+    srcs = [
+        ":package_files_binaries",
+        ":package_files_libraries",
+    ],
+)
+
+pkg_install(
+    name = "install_dir",
+    srcs = [":package_files"],
+    tags = ["manual"],
+)
+
+runtime_module(
+    name = "module",
+    executables = [
+        "//cli:wheelos-sensor-bench",
+        "//probe:cyber_channel_probe",
+    ],
+    files = {
+        "//probe:libwheelos_alloc_probe.so": "share/benchmark/libwheelos_alloc_probe.so",
+    },
+    module_name = "benchmark",
+)

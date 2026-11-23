@@ -7,7 +7,7 @@ Read this when changing module boundaries, dependencies, or runtime assembly.
 ## Rules / Facts
 
 - **Multi-module Monorepo**: The repository root (`pkgs/hardware/`) is a Git
-  container, not a Bazel module. Each of the 13 top-level directories is an
+  container, not a Bazel module. Each of the 14 top-level directories is an
   independent Bzlmod module:
   - Build/platform support: `hardware.build` (`build/`, Starlark-only).
   - Transport & CAN foundation: `hardware.hal` (`hal/`), `hardware.canbus` (`canbus/`).
@@ -18,6 +18,8 @@ Read this when changing module boundaries, dependencies, or runtime assembly.
     `hardware.radar` (`radar/`).
   - Vehicle & equipment control: `hardware.vehicle` (`vehicle/`),
     `hardware.equipment` (`equipment/`).
+  - Performance & selection suite: `hardware.benchmark` (`benchmark/`,
+    optional CLI, Cyber probe, and `LD_PRELOAD` allocation/copy profiler).
 - **Why `build/` is a subdirectory**: Keeping `hardware.build` under `build/`
   prevents root-workspace package collisions across the 12 functional modules,
   allows clean BCR `strip_prefix` source slicing (`hardware-<ver>/build`), and

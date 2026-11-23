@@ -18,6 +18,7 @@ umbrella module. Each directory below is a module root with its own
 | `hardware.hal` / `hal/` | Existing serial/TCP/UDP/NTRIP/CAN stream abstraction | `@hardware.hal//:stream_factory`, `//stream:stream_factory` |
 | `hardware.audio` / `audio/` | Microphone | `@hardware.audio//:component`, `:module` |
 | `hardware.video` / `video/` | Video driver | `@hardware.video//:component`, `:module` |
+| `hardware.benchmark` / `benchmark/` | Driver benchmark profiler & selection suite | `@hardware.benchmark//:wheelos-sensor-bench`, `:module` |
 | `hardware.build` / `build/` | Shared Starlark build settings and platform constraints; no runtime driver code | `@hardware.build//tools/hardware:vehicle` |
 
 Vehicle and CAN-based radar depend on `hardware.canbus`. GNSS uses the shared

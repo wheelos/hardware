@@ -39,6 +39,7 @@ Bzlmod Monorepo** aligned with `wheelos_core` and `apollo-lite`.
 | `hardware.radar` | `radar/` | Radar CAN drivers (`:component`, `:conti`, `:nano`, `:racobit`, `:udas_ultrasonic`, `:ultrasonic`, `:yg`, `//<brand>:module`, `:module`). |
 | `hardware.vehicle` | `vehicle/` | Vehicle chassis component, factory, and brand protocols (`:component`, `:module`, `//brands/<brand>:<brand>_vehicle_factory`). |
 | `hardware.equipment` | `equipment/` | Device-first equipment control RPC service & typed clients on `hardware.hal` (`:component`, `:client`, `:charger`, `:module`). |
+| `hardware.benchmark` | `benchmark/` | Optional Driver Benchmark Profiler (`:wheelos-sensor-bench`, `:cyber_channel_probe`, `:alloc_probe`, `:module`). |
 
 > **Transport contract note**: `hardware.hal` (`Stream` / `CanStream`) and
 > `hardware.canbus` (`CanClient`) serve distinct contracts and remain separate.

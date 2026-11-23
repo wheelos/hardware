@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 MODULES = (
     "audio",
+    "benchmark",
     "build",
     "camera",
     "camera_gst",
@@ -32,6 +33,7 @@ EXPECTED_VERSIONS = {
     "protobuf": "36.2",
     "rules_cc": "0.2.26",
     "rules_pkg": "1.3.0",
+    "rules_python": "2.4.1",
     "wheelos_common": "0.1.3",
     "wheelos_core": "1.0.6",
     "wheelos_msgs": "0.1.6",
@@ -41,6 +43,7 @@ EXPECTED_VERSIONS = {
 
 RUNTIME_MODULE_REQUIRED = (
     "audio",
+    "benchmark",
     "camera",
     "camera_gst",
     "canbus",

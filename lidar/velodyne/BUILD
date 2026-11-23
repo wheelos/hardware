@@ -1,4 +1,5 @@
 load("@core//runtime:install.bzl", "pkg_install")
+load("@core//runtime:runtime.bzl", "runtime_module", "runtime_resources")
 load("@rules_pkg//pkg:mappings.bzl", "pkg_attributes", "pkg_filegroup", "pkg_files", "strip_prefix")
 
 package(default_visibility = ["//visibility:public"])
@@ -46,4 +47,22 @@ filegroup(
         "launch/*.launch",
         "params/*.yaml",
     ]),
+)
+
+runtime_resources(
+    name = "runtime_resources",
+    files = [":runtime_data"],
+    module_name = "velodyne",
+)
+
+runtime_module(
+    name = "module",
+    components = [
+        "//velodyne/compensator:libvelodyne_compensator_component.so",
+        "//velodyne/driver:libvelodyne_driver_component.so",
+        "//velodyne/fusion:libvelodyne_fusion_component.so",
+        "//velodyne/parser:libvelodyne_convert_component.so",
+    ],
+    module_name = "velodyne",
+    resources = [":runtime_resources"],
 )

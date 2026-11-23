@@ -1,5 +1,6 @@
-load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("@core//runtime:install.bzl", "pkg_install")
+load("@core//runtime:runtime.bzl", "runtime_module", "runtime_resources")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("@rules_pkg//pkg:mappings.bzl", "pkg_attributes", "pkg_filegroup", "pkg_files", "strip_prefix")
 
 package(default_visibility = ["//visibility:public"])
@@ -43,6 +44,19 @@ filegroup(
         "dag/*.dag",
         "launch/*.launch",
     ]),
+)
+
+runtime_resources(
+    name = "runtime_resources",
+    files = [":runtime_data"],
+    module_name = "rslidar",
+)
+
+runtime_module(
+    name = "module",
+    components = [":librslidar_component.so"],
+    module_name = "rslidar",
+    resources = [":runtime_resources"],
 )
 
 cc_binary(

@@ -1,5 +1,6 @@
-load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("@core//runtime:install.bzl", "pkg_install")
+load("@core//runtime:runtime.bzl", "runtime_module", "runtime_resources")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("@rules_pkg//pkg:mappings.bzl", "pkg_attributes", "pkg_filegroup", "pkg_files", "strip_prefix")
 
 package(default_visibility = ["//visibility:public"])
@@ -16,7 +17,7 @@ pkg_files(
     name = "package_files_libraries",
     srcs = [":libultrasonic_radar_canbus_component.so"],
     attributes = pkg_attributes(mode = "0755"),
-    prefix = "drivers/lib/racobit_radar",
+    prefix = "drivers/lib/ultrasonic_radar",
     strip_prefix = strip_prefix.from_root("ultrasonic_radar"),
 )
 
@@ -121,4 +122,17 @@ cc_binary(
     linkshared = True,
     linkstatic = False,
     deps = [":ultrasonic_radar_canbus_component_lib"],
+)
+
+runtime_resources(
+    name = "runtime_resources",
+    files = [":runtime_data"],
+    module_name = "ultrasonic_radar",
+)
+
+runtime_module(
+    name = "module",
+    components = [":libultrasonic_radar_canbus_component.so"],
+    module_name = "ultrasonic_radar",
+    resources = [":runtime_resources"],
 )

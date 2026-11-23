@@ -1,3 +1,38 @@
 package(default_visibility = ["//visibility:public"])
 
 exports_files(["CPPLINT.cfg"])
+
+alias(
+    name = "stream",
+    actual = "//stream",
+)
+
+alias(
+    name = "stream_factory",
+    actual = "//stream:stream_factory",
+)
+
+alias(
+    name = "can_stream",
+    actual = "//stream:can_stream",
+)
+
+alias(
+    name = "serial_stream",
+    actual = "//stream:serial_stream",
+)
+
+alias(
+    name = "tcp_stream",
+    actual = "//stream:tcp_stream",
+)
+
+alias(
+    name = "udp_stream",
+    actual = "//stream:udp_stream",
+)
+
+alias(
+    name = "ntrip_stream",
+    actual = "//stream:ntrip_stream",
+)

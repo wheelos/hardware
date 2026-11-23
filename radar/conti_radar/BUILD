@@ -1,5 +1,6 @@
-load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("@core//runtime:install.bzl", "pkg_install")
+load("@core//runtime:runtime.bzl", "runtime_module", "runtime_resources")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("@rules_pkg//pkg:mappings.bzl", "pkg_attributes", "pkg_filegroup", "pkg_files", "strip_prefix")
 
 package(default_visibility = ["//visibility:public"])
@@ -87,4 +88,17 @@ cc_binary(
     linkshared = True,
     linkstatic = False,
     deps = [":conti_radar_canbus_lib"],
+)
+
+runtime_resources(
+    name = "runtime_resources",
+    files = [":runtime_data"],
+    module_name = "conti_radar",
+)
+
+runtime_module(
+    name = "module",
+    components = [":libconti_radar.so"],
+    module_name = "conti_radar",
+    resources = [":runtime_resources"],
 )

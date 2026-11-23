@@ -1,3 +1,4 @@
+load("@core//runtime:runtime.bzl", "runtime_module", "runtime_resources")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 
 package(default_visibility = ["//visibility:public"])
@@ -51,4 +52,17 @@ filegroup(
         "correction/*/*.dat",
         "correction/*/*.csv",
     ]),
+)
+
+runtime_resources(
+    name = "runtime_resources",
+    files = [":runtime_data"],
+    module_name = "hesai",
+)
+
+runtime_module(
+    name = "module",
+    components = [":libhesai_component.so"],
+    module_name = "hesai",
+    resources = [":runtime_resources"],
 )

@@ -1,4 +1,5 @@
 load("@core//runtime:install.bzl", "pkg_install")
+load("@core//runtime:runtime.bzl", "runtime_module")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@rules_pkg//pkg:mappings.bzl", "pkg_attributes", "pkg_filegroup", "pkg_files", "strip_prefix")
 
@@ -19,6 +20,17 @@ alias(
 alias(
     name = "tool",
     actual = "//can_client:can_client_tool",
+)
+
+alias(
+    name = "sensor_canbus",
+    actual = ":sensor_canbus_lib",
+)
+
+runtime_module(
+    name = "module",
+    executables = [":tool"],
+    module_name = "canbus",
 )
 
 pkg_files(

@@ -1,4 +1,5 @@
 load("@core//runtime:install.bzl", "pkg_install")
+load("@core//runtime:runtime.bzl", "runtime_module", "runtime_resources")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("@rules_pkg//pkg:mappings.bzl", "pkg_attributes", "pkg_filegroup", "pkg_files", "strip_prefix")
 
@@ -94,4 +95,17 @@ filegroup(
         "dag/*.dag",
         "launch/*.launch",
     ]),
+)
+
+runtime_resources(
+    name = "runtime_resources",
+    files = [":runtime_data"],
+    module_name = "gnss",
+)
+
+runtime_module(
+    name = "module",
+    components = [":libgnss_component.so"],
+    module_name = "gnss",
+    resources = [":runtime_resources"],
 )

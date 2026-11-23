@@ -1,3 +1,4 @@
+load("@core//runtime:runtime.bzl", "runtime_module", "runtime_resources")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
 
 package(default_visibility = ["//visibility:public"])
@@ -11,6 +12,19 @@ filegroup(
         "dag/*.dag",
         "launch/*.launch",
     ]),
+)
+
+runtime_resources(
+    name = "runtime_resources",
+    files = [":runtime_data"],
+    module_name = "lidar_fusion",
+)
+
+runtime_module(
+    name = "module",
+    components = [":liblidar_fusion_component.so"],
+    module_name = "lidar_fusion",
+    resources = [":runtime_resources"],
 )
 
 cc_binary(

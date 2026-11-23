@@ -1,3 +1,4 @@
+load("@core//runtime:runtime.bzl", "runtime_module", "runtime_resources")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 
 package(default_visibility = ["//visibility:public"])
@@ -10,6 +11,19 @@ filegroup(
         "launch/*.launch",
         "params/*.yaml",
     ]),
+)
+
+runtime_resources(
+    name = "runtime_resources",
+    files = [":runtime_data"],
+    module_name = "lslidar",
+)
+
+runtime_module(
+    name = "module",
+    components = [":liblslidar_component.so"],
+    module_name = "lslidar",
+    resources = [":runtime_resources"],
 )
 
 cc_binary(

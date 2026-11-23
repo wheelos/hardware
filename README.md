@@ -6,19 +6,19 @@ umbrella module. Each directory below is a module root with its own
 
 | Module/root | Responsibility | Public example |
 | --- | --- | --- |
-| `hardware.camera` / `camera/` | V4L2 camera and compression | `@hardware.camera//:component` |
-| `hardware.camera_gst` / `camera_gst/` | GStreamer/Orin camera backend | `@hardware.camera_gst//:component` |
-| `hardware.image_decompress` / `image_decompress/` | Image-message decoder/component, independent of camera devices | `@hardware.image_decompress//:component`, `:image_decoder` |
-| `hardware.canbus` / `canbus/` | CAN transport, clients and communication primitives | `@hardware.canbus//:client`, `:factory`, `:tool` |
-| `hardware.vehicle` / `vehicle/` | Vehicle component, factory and brand protocols | `@hardware.vehicle//:component` |
-| `hardware.equipment` / `equipment/` | Independent device capabilities and RPC operation lifecycle on HAL Streams | `@hardware.equipment//:component`, `:client` |
-| `hardware.lidar` / `lidar/` | LiDAR implementations and SDK adapters | `@hardware.lidar//:hesai` |
-| `hardware.radar` / `radar/` | Radar implementations | `@hardware.radar//:conti` |
-| `hardware.gnss` / `gnss/` | GNSS streams, parsers and RTKLib | `@hardware.gnss//:component` |
-| `hardware.hal` / `hal/` | Existing serial/TCP/UDP/NTRIP/CAN stream abstraction | `@hardware.hal//stream:stream_factory` |
-| `hardware.audio` / `audio/` | Microphone | `@hardware.audio//:component` |
-| `hardware.video` / `video/` | Video driver | `@hardware.video//:component` |
-| `hardware.build` / `build/` | Shared rules, settings, installation provider/templates; no runtime driver code | `@hardware.build//tools/hardware:vehicle` |
+| `hardware.camera` / `camera/` | V4L2 camera and compression | `@hardware.camera//:component`, `:module` |
+| `hardware.camera_gst` / `camera_gst/` | GStreamer/Orin camera backend | `@hardware.camera_gst//:component`, `:module` |
+| `hardware.image_decompress` / `image_decompress/` | Image-message decoder/component, independent of camera devices | `@hardware.image_decompress//:component`, `:image_decoder`, `:module` |
+| `hardware.canbus` / `canbus/` | CAN transport, clients and communication primitives | `@hardware.canbus//:client`, `:factory`, `:tool`, `:module` |
+| `hardware.vehicle` / `vehicle/` | Vehicle component, factory and brand protocols | `@hardware.vehicle//:component`, `:module`, `//brands/devkit:devkit_vehicle_factory` |
+| `hardware.equipment` / `equipment/` | Independent device capabilities and RPC operation lifecycle on HAL Streams | `@hardware.equipment//:component`, `:client`, `:module` |
+| `hardware.lidar` / `lidar/` | LiDAR implementations and SDK adapters | `@hardware.lidar//:hesai`, `//hesai:module`, `:module` |
+| `hardware.radar` / `radar/` | Radar implementations | `@hardware.radar//:conti`, `//conti_radar:module`, `:module` |
+| `hardware.gnss` / `gnss/` | GNSS streams, parsers and RTKLib | `@hardware.gnss//:component`, `:module` |
+| `hardware.hal` / `hal/` | Existing serial/TCP/UDP/NTRIP/CAN stream abstraction | `@hardware.hal//:stream_factory`, `//stream:stream_factory` |
+| `hardware.audio` / `audio/` | Microphone | `@hardware.audio//:component`, `:module` |
+| `hardware.video` / `video/` | Video driver | `@hardware.video//:component`, `:module` |
+| `hardware.build` / `build/` | Shared Starlark build settings and platform constraints; no runtime driver code | `@hardware.build//tools/hardware:vehicle` |
 
 Vehicle and CAN-based radar depend on `hardware.canbus`. GNSS uses the shared
 `hardware.hal` module. Shared helpers/settings do not depend on functional
@@ -131,3 +131,10 @@ initially; independent modules do not require independent Git repositories or
 release cadences. Publish shared dependencies before consumers and validate
 registry builds without local overrides. No registry metadata or release
 revision is fabricated here.
+
+## Documentation and Governance
+
+- Formal project and SDK integration docs: [docs/README.md](docs/README.md)
+- Agent rules, skills, and durable repository knowledge: [AGENTS.md](AGENTS.md)
+- Structural and downstream checks: `python3 scripts/validate_modules.py` and
+  `bash scripts/validate_downstream_consumer.sh`

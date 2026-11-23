@@ -1,5 +1,6 @@
-load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
 load("@core//runtime:install.bzl", "pkg_install")
+load("@core//runtime:runtime.bzl", "runtime_module", "runtime_resources")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
 load("@rules_pkg//pkg:mappings.bzl", "pkg_attributes", "pkg_filegroup", "pkg_files", "strip_prefix")
 
 package(default_visibility = ["//visibility:public"])
@@ -98,4 +99,17 @@ exports_files(["CPPLINT.cfg"])
 alias(
     name = "component",
     actual = ":libimage_decompress.so",
+)
+
+runtime_resources(
+    name = "runtime_resources",
+    files = [":runtime_data"],
+    module_name = "image_decompress",
+)
+
+runtime_module(
+    name = "module",
+    components = [":libimage_decompress.so"],
+    module_name = "image_decompress",
+    resources = [":runtime_resources"],
 )

@@ -1,5 +1,6 @@
-load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
 load("@core//runtime:install.bzl", "pkg_install")
+load("@core//runtime:runtime.bzl", "runtime_module", "runtime_resources")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
 load("@rules_pkg//pkg:mappings.bzl", "pkg_attributes", "pkg_filegroup", "pkg_files", "strip_prefix")
 
 package(default_visibility = ["//visibility:public"])
@@ -43,6 +44,19 @@ filegroup(
         "dag/*.dag",
         "launch/*.launch",
     ]),
+)
+
+runtime_resources(
+    name = "runtime_resources",
+    files = [":runtime_data"],
+    module_name = "vanjeelidar",
+)
+
+runtime_module(
+    name = "module",
+    components = [":libvanjeelidar_component.so"],
+    module_name = "vanjeelidar",
+    resources = [":runtime_resources"],
 )
 
 cc_binary(

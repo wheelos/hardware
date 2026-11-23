@@ -1,12 +1,23 @@
-load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("@core//runtime:install.bzl", "pkg_install")
+load("@core//runtime:runtime.bzl", "runtime_module", "runtime_resources")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("@rules_pkg//pkg:mappings.bzl", "pkg_attributes", "pkg_filegroup", "pkg_files", "strip_prefix")
 
 package(default_visibility = ["//visibility:public"])
 
+exports_files(["CPPLINT.cfg"])
+
 filegroup(
     name = "simulation_config",
     srcs = ["conf/simulation.pb.txt"],
+)
+
+filegroup(
+    name = "runtime_data",
+    srcs = glob([
+        "conf/*.txt",
+        "dag/*.dag",
+    ]),
 )
 
 cc_library(
@@ -204,10 +215,7 @@ alias(
 
 pkg_files(
     name = "package_files_data",
-    srcs = glob([
-        "conf/*.txt",
-        "dag/*.dag",
-    ]),
+    srcs = [":runtime_data"],
     attributes = pkg_attributes(mode = "0644"),
     prefix = "drivers/addition_data/equipment",
     strip_prefix = strip_prefix.from_root(""),
@@ -233,4 +241,17 @@ pkg_install(
     name = "install_dir",
     srcs = [":package_files"],
     tags = ["manual"],
+)
+
+runtime_resources(
+    name = "runtime_resources",
+    files = [":runtime_data"],
+    module_name = "equipment",
+)
+
+runtime_module(
+    name = "module",
+    components = [":libequipment_component.so"],
+    module_name = "equipment",
+    resources = [":runtime_resources"],
 )

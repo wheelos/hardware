@@ -1,5 +1,6 @@
-load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
 load("@core//runtime:install.bzl", "pkg_install")
+load("@core//runtime:runtime.bzl", "runtime_module", "runtime_resources")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
 load("@rules_pkg//pkg:mappings.bzl", "pkg_attributes", "pkg_filegroup", "pkg_files", "strip_prefix")
 
 package(default_visibility = ["//visibility:public"])
@@ -144,4 +145,23 @@ exports_files(["CPPLINT.cfg"])
 alias(
     name = "component",
     actual = ":libcamera_gst_component.so",
+)
+
+alias(
+    name = "frame_extractor",
+    actual = ":camera_gst_frame_extractor",
+)
+
+runtime_resources(
+    name = "runtime_resources",
+    files = [":runtime_data"],
+    module_name = "camera_gst",
+)
+
+runtime_module(
+    name = "module",
+    components = [":libcamera_gst_component.so"],
+    module_name = "camera_gst",
+    resources = [":runtime_resources"],
+    target_compatible_with = ["@hardware.build//tools/platform:jetson_orin"],
 )

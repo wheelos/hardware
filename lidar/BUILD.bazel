@@ -1,5 +1,7 @@
-load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("@core//runtime:install.bzl", "pkg_install")
+load("@core//runtime:runtime.bzl", "runtime_module", "runtime_resources")
+load("@hardware.build//tools/hardware:defs.bzl", "enabled")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("@rules_pkg//pkg:mappings.bzl", "pkg_attributes", "pkg_filegroup", "pkg_files", "strip_prefix")
 
 package(default_visibility = ["//visibility:public"])
@@ -14,6 +16,51 @@ alias(
 alias(
     name = "hesai",
     actual = "//hesai:libhesai_component.so",
+)
+
+alias(
+    name = "livox",
+    actual = "//livox:liblivox_component.so",
+)
+
+alias(
+    name = "lslidar",
+    actual = "//lslidar:liblslidar_component.so",
+)
+
+alias(
+    name = "rslidar",
+    actual = "//rslidar:librslidar_component.so",
+)
+
+alias(
+    name = "seyond",
+    actual = "//seyond:libseyond_component.so",
+)
+
+alias(
+    name = "vanjeelidar",
+    actual = "//vanjeelidar:libvanjeelidar_component.so",
+)
+
+alias(
+    name = "velodyne",
+    actual = "//velodyne/driver:libvelodyne_driver_component.so",
+)
+
+alias(
+    name = "processor",
+    actual = "//processor:liblidar_unified_component.so",
+)
+
+alias(
+    name = "compensator",
+    actual = "//compensator:liblidar_compensator_component.so",
+)
+
+alias(
+    name = "fusion",
+    actual = "//fusion:liblidar_fusion_component.so",
 )
 
 pkg_files(
@@ -54,6 +101,58 @@ filegroup(
         "dag/*.dag",
         "launch/*.launch",
     ]),
+)
+
+_LIDAR_BRAND_COMPONENTS = {
+    "hesai": ["//hesai:libhesai_component.so"],
+    "livox": ["//livox:liblivox_component.so"],
+    "lslidar": ["//lslidar:liblslidar_component.so"],
+    "rslidar": ["//rslidar:librslidar_component.so"],
+    "seyond": ["//seyond:libseyond_component.so"],
+    "vanjeelidar": ["//vanjeelidar:libvanjeelidar_component.so"],
+    "velodyne": [
+        "//velodyne/compensator:libvelodyne_compensator_component.so",
+        "//velodyne/driver:libvelodyne_driver_component.so",
+        "//velodyne/fusion:libvelodyne_fusion_component.so",
+        "//velodyne/parser:libvelodyne_convert_component.so",
+    ],
+}
+
+runtime_resources(
+    name = "runtime_resources",
+    files = [":runtime_data"],
+    module_name = "lidar",
+)
+
+[
+    runtime_resources(
+        name = brand + "_runtime_resources",
+        files = ["//" + brand + ":runtime_data"],
+        module_name = "lidar",
+        namespace = "lidar/" + brand,
+    )
+    for brand in _LIDAR_BRAND_COMPONENTS
+]
+
+runtime_module(
+    name = "module",
+    components = [":liblidar_driver_component.so"] +
+                 enabled("with_lidar_hesai", _LIDAR_BRAND_COMPONENTS["hesai"]) +
+                 enabled("with_lidar_livox", _LIDAR_BRAND_COMPONENTS["livox"]) +
+                 enabled("with_lidar_lslidar", _LIDAR_BRAND_COMPONENTS["lslidar"]) +
+                 enabled("with_lidar_rslidar", _LIDAR_BRAND_COMPONENTS["rslidar"]) +
+                 enabled("with_lidar_seyond", _LIDAR_BRAND_COMPONENTS["seyond"]) +
+                 enabled("with_lidar_vanjeelidar", _LIDAR_BRAND_COMPONENTS["vanjeelidar"]) +
+                 enabled("with_lidar_velodyne", _LIDAR_BRAND_COMPONENTS["velodyne"]),
+    module_name = "lidar",
+    resources = [":runtime_resources"] +
+                enabled("with_lidar_hesai", [":hesai_runtime_resources"]) +
+                enabled("with_lidar_livox", [":livox_runtime_resources"]) +
+                enabled("with_lidar_lslidar", [":lslidar_runtime_resources"]) +
+                enabled("with_lidar_rslidar", [":rslidar_runtime_resources"]) +
+                enabled("with_lidar_seyond", [":seyond_runtime_resources"]) +
+                enabled("with_lidar_vanjeelidar", [":vanjeelidar_runtime_resources"]) +
+                enabled("with_lidar_velodyne", [":velodyne_runtime_resources"]),
 )
 
 cc_library(

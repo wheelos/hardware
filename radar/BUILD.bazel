@@ -1,22 +1,56 @@
-load("@rules_cc//cc:defs.bzl", "cc_test")
 load("@core//runtime:install.bzl", "pkg_install")
-load("@rules_pkg//pkg:mappings.bzl", "pkg_attributes", "pkg_filegroup", "pkg_files", "strip_prefix")
+load("@core//runtime:runtime.bzl", "runtime_module", "runtime_resources")
+load("@rules_cc//cc:defs.bzl", "cc_test")
+load("@rules_pkg//pkg:mappings.bzl", "pkg_filegroup")
 
 package(default_visibility = ["//visibility:public"])
 
 exports_files(["CPPLINT.cfg"])
 
 alias(
+    name = "component",
+    actual = ":conti",
+)
+
+alias(
     name = "conti",
     actual = "//conti_radar:libconti_radar.so",
+)
+
+alias(
+    name = "nano",
+    actual = "//nano_radar:libnano_radar.so",
+)
+
+alias(
+    name = "racobit",
+    actual = "//racobit_radar:libracobit_radar_canbus_component.so",
+)
+
+alias(
+    name = "udas_ultrasonic",
+    actual = "//udas_ultrasonic_radar:libudas_ultrasonic_radar_component.so",
+)
+
+alias(
+    name = "ultrasonic",
+    actual = "//ultrasonic_radar:libultrasonic_radar_canbus_component.so",
+)
+
+alias(
+    name = "yg",
+    actual = "//yg_radar:libyg_radar_component.so",
 )
 
 pkg_filegroup(
     name = "package_files",
     srcs = [
         "//conti_radar:package_files",
+        "//nano_radar:package_files",
         "//racobit_radar:package_files",
+        "//udas_ultrasonic_radar:package_files",
         "//ultrasonic_radar:package_files",
+        "//yg_radar:package_files",
     ],
 )
 
@@ -24,6 +58,44 @@ pkg_install(
     name = "install_dir",
     srcs = [":package_files"],
     tags = ["manual"],
+)
+
+[
+    runtime_resources(
+        name = brand + "_runtime_resources",
+        files = ["//" + brand + ":runtime_data"],
+        module_name = "radar",
+        namespace = "radar/" + brand,
+    )
+    for brand in [
+        "conti_radar",
+        "nano_radar",
+        "racobit_radar",
+        "udas_ultrasonic_radar",
+        "ultrasonic_radar",
+        "yg_radar",
+    ]
+]
+
+runtime_module(
+    name = "module",
+    components = [
+        "//conti_radar:libconti_radar.so",
+        "//nano_radar:libnano_radar.so",
+        "//racobit_radar:libracobit_radar_canbus_component.so",
+        "//udas_ultrasonic_radar:libudas_ultrasonic_radar_component.so",
+        "//ultrasonic_radar:libultrasonic_radar_canbus_component.so",
+        "//yg_radar:libyg_radar_component.so",
+    ],
+    module_name = "radar",
+    resources = [
+        ":conti_radar_runtime_resources",
+        ":nano_radar_runtime_resources",
+        ":racobit_radar_runtime_resources",
+        ":udas_ultrasonic_radar_runtime_resources",
+        ":ultrasonic_radar_runtime_resources",
+        ":yg_radar_runtime_resources",
+    ],
 )
 
 cc_test(

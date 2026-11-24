@@ -136,6 +136,7 @@ class StatsAccumulator {
     oss << "{\n";
     oss << "  \"channel\": \"" << EscapeJson(s.channel) << "\",\n";
     oss << "  \"msg_type\": \"" << EscapeJson(s.msg_type) << "\",\n";
+    oss << "  \"latency_timestamp\": \"callback_entry\",\n";
     oss << "  \"transport_mode\": \"" << EscapeJson(s.transport_mode)
         << "\",\n";
     oss << "  \"message_count\": " << s.message_count << ",\n";

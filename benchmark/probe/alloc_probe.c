@@ -17,10 +17,15 @@
 
 #define _GNU_SOURCE
 #include <dlfcn.h>
+#include <fcntl.h>
 #include <malloc.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <time.h>
+#include <unistd.h>
 
 typedef void* (*memcpy_fn)(void*, const void*, size_t);
 typedef void* (*memmove_fn)(void*, const void*, size_t);
@@ -38,6 +43,7 @@ static uint64_t g_memmove_bytes = 0;
 static size_t g_init_uordblks = 0;
 static size_t g_init_hblkhd = 0;
 static __thread int tls_resolving = 0;
+static const uint64_t* g_window = NULL;
 
 static const size_t kLargeCopyThreshold = 4096;
 
@@ -83,9 +89,41 @@ static void resolve_symbols(void) {
 
 __attribute__((constructor)) static void alloc_probe_init(void) {
   resolve_symbols();
+  const char* window_path = getenv("WHEELOS_BENCH_WINDOW");
+  if (window_path != NULL && window_path[0] != '\0') {
+    int fd = open(window_path, O_RDONLY);
+    if (fd >= 0) {
+      struct stat st;
+      void* mapping = MAP_FAILED;
+      if (fstat(fd, &st) == 0 && st.st_size >= 2 * (off_t)sizeof(uint64_t)) {
+        mapping = mmap(NULL, 2 * sizeof(uint64_t), PROT_READ, MAP_SHARED, fd, 0);
+      }
+      close(fd);
+      if (mapping != MAP_FAILED) {
+        g_window = (const uint64_t*)mapping;
+      }
+    }
+  }
   struct mallinfo2 mi = mallinfo2();
   g_init_uordblks = mi.uordblks;
   g_init_hblkhd = mi.hblkhd;
+}
+
+static int in_measurement_window(void) {
+  if (g_window == NULL) {
+    return 0;
+  }
+  uint64_t start = __atomic_load_n(&g_window[0], __ATOMIC_ACQUIRE);
+  uint64_t end = __atomic_load_n(&g_window[1], __ATOMIC_RELAXED);
+  if (start == 0 || end <= start) {
+    return 0;
+  }
+  struct timespec ts;
+  if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
+    return 0;
+  }
+  uint64_t now = (uint64_t)ts.tv_sec * 1000000000ULL + (uint64_t)ts.tv_nsec;
+  return now >= start && now < end;
 }
 
 void* memcpy(void* dst, const void* src, size_t n) {
@@ -96,7 +134,7 @@ void* memcpy(void* dst, const void* src, size_t n) {
   }
   __atomic_fetch_add(&g_total_memcpy_calls, 1, __ATOMIC_RELAXED);
   __atomic_fetch_add(&g_total_memcpy_bytes, (uint64_t)n, __ATOMIC_RELAXED);
-  if (n >= kLargeCopyThreshold) {
+  if (n >= kLargeCopyThreshold && in_measurement_window()) {
     __atomic_fetch_add(&g_large_memcpy_calls, 1, __ATOMIC_RELAXED);
     __atomic_fetch_add(&g_large_memcpy_bytes, (uint64_t)n, __ATOMIC_RELAXED);
   }
@@ -114,7 +152,7 @@ void* memmove(void* dst, const void* src, size_t n) {
   }
   __atomic_fetch_add(&g_memmove_calls, 1, __ATOMIC_RELAXED);
   __atomic_fetch_add(&g_memmove_bytes, (uint64_t)n, __ATOMIC_RELAXED);
-  if (n >= kLargeCopyThreshold) {
+  if (n >= kLargeCopyThreshold && in_measurement_window()) {
     __atomic_fetch_add(&g_large_memcpy_calls, 1, __ATOMIC_RELAXED);
     __atomic_fetch_add(&g_large_memcpy_bytes, (uint64_t)n, __ATOMIC_RELAXED);
   }
@@ -139,6 +177,7 @@ __attribute__((destructor)) static void alloc_probe_fini(void) {
   }
   fprintf(fp,
           "{\n"
+          "  \"measurement_window_aligned\": %s,\n"
           "  \"large_copy_threshold_bytes\": %zu,\n"
           "  \"total_memcpy_calls\": %llu,\n"
           "  \"total_memcpy_bytes\": %llu,\n"
@@ -149,6 +188,10 @@ __attribute__((destructor)) static void alloc_probe_fini(void) {
           "  \"heap_uordblks_delta_bytes\": %lld,\n"
           "  \"heap_mmap_delta_bytes\": %lld\n"
           "}\n",
+          (g_window != NULL && __atomic_load_n(&g_window[0], __ATOMIC_ACQUIRE) != 0 &&
+           __atomic_load_n(&g_window[1], __ATOMIC_RELAXED) >
+               __atomic_load_n(&g_window[0], __ATOMIC_RELAXED))
+              ? "true" : "false",
           kLargeCopyThreshold,
           (unsigned long long)__atomic_load_n(&g_total_memcpy_calls,
                                              __ATOMIC_RELAXED),

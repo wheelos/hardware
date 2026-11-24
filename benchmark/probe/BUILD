@@ -4,7 +4,10 @@ package(default_visibility = ["//visibility:public"])
 
 cc_library(
     name = "stats_accumulator",
-    hdrs = ["stats_accumulator.h"],
+    hdrs = [
+        "arrival_sample.h",
+        "stats_accumulator.h",
+    ],
     include_prefix = "modules/drivers/benchmark",
     strip_include_prefix = "/probe",
 )

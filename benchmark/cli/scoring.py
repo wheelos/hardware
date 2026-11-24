@@ -93,28 +93,28 @@ def evaluate_baseline(
     combined_drop_pct = max(seq_drop_pct, nic_drop_pct)
 
     d2a = channel.get("driver_to_app_ms") or {}
+    has_latency = (
+        msg_count > 0 and bool(d2a) and d2a.get("count", 1) > 0
+        and channel.get("latency_timestamp") == "callback_entry"
+    )
     p99_ms = float(d2a.get("p99_ms", 0.0))
     p50_ms = float(d2a.get("p50_ms", 0.0))
     jitter_ms = max(0.0, p99_ms - p50_ms)
 
     total_payload = int(channel.get("total_payload_bytes", 0))
     large_memcpy = int(alloc.get("large_memcpy_bytes", 0))
+    threshold = int(alloc.get("large_copy_threshold_bytes", 4096))
+    small_messages = msg_count > 0 and total_payload / msg_count < threshold
     copy_amp = (
         (large_memcpy / total_payload)
-        if (alloc.get("available") and total_payload > 0)
+        if (alloc.get("available") and alloc.get("measurement_window_aligned")
+            and total_payload > 0 and not small_messages)
         else None
     )
     transport_mode = str(channel.get("transport_mode", "UNKNOWN"))
     shm_transport = transport_mode in ("SHM", "HYBRID", "INTRA", "ICEORYX")
 
-    if copy_amp is not None and shm_transport and copy_amp <= 0.25:
-        zc_status = "end_to_end_zero_copy"
-    elif shm_transport and (copy_amp is None or copy_amp > 0.25):
-        zc_status = "transport_shm_with_driver_copy"
-    elif not shm_transport and copy_amp is not None and copy_amp <= 0.25:
-        zc_status = "driver_zero_copy_only"
-    else:
-        zc_status = "copied"
+    zc_status = "copy_observed" if copy_amp is not None and copy_amp > 0 else "unknown"
 
     rss_mean = float(mem_info.get("rss_mb_mean", 0.0))
     rss_drift = float(mem_info.get("rss_drift_mb_per_min", 0.0))
@@ -149,14 +149,35 @@ def evaluate_baseline(
         + weights["memory"] * s_mem
         + weights["softirq"] * s_irq
     )
-    total_score = round(100.0 * weighted, 1)
+    has_copy_score = copy_amp is not None and copy_amp > 0
+    total_score = round(100.0 * weighted, 1) if has_latency and has_copy_score else None
 
     red_flags: list[str] = []
+    if msg_count == 0:
+        red_flags.append(
+            "No channel messages observed; selection score, latency, sequence drops and zero-copy cannot be established."
+        )
+    elif not has_latency:
+        red_flags.append(
+            "No valid callback-entry driver-to-app latency samples; selection score and latency cannot be established."
+        )
+    if msg_count > 0 and copy_amp is None:
+        red_flags.append(
+            "Copy amplification is unavailable; selection score and zero-copy cannot be established."
+        )
+    elif copy_amp == 0:
+        red_flags.append(
+            "No large copies were intercepted; selection score and zero-copy cannot be established."
+        )
+    if copy_amp is not None:
+        red_flags.append(
+            "Intercepted large-copy bytes are process-wide; configured transport and this ratio do not prove end-to-end zero-copy."
+        )
     if combined_drop_pct > 0.1 or udp_drops > 0:
         red_flags.append(
             f"Packet/frame drops detected (seq={seq_drop_pct:.3f}%, nic={nic_drop_pct:.3f}%, udp_drops={udp_drops}); consider raising net.core.rmem_max or NIC ring buffer."
         )
-    if p99_ms > ceilings["p99_latency_ms"]:
+    if has_latency and p99_ms > ceilings["p99_latency_ms"]:
         red_flags.append(
             f"High driver-to-app P99 latency ({p99_ms:.2f} ms > {ceilings['p99_latency_ms']:.1f} ms)."
         )
@@ -174,9 +195,9 @@ def evaluate_baseline(
         "total_score": total_score,
         "subscores": {
             "cpu": round(s_cpu * 100.0, 1),
-            "latency": round(s_lat * 100.0, 1),
-            "drop": round(s_drop * 100.0, 1),
-            "zero_copy": round(s_zc * 100.0, 1),
+            "latency": round(s_lat * 100.0, 1) if has_latency else None,
+            "drop": round(s_drop * 100.0, 1) if msg_count > 0 else None,
+            "zero_copy": round(s_zc * 100.0, 1) if has_copy_score else None,
             "memory": round(s_mem * 100.0, 1),
             "softirq": round(s_irq * 100.0, 1),
         },
@@ -185,14 +206,14 @@ def evaluate_baseline(
             "cpu_per_100mbps": round(cpu_per_100mbps, 2)
             if cpu_per_100mbps is not None
             else None,
-            "seq_drop_rate_pct": round(seq_drop_pct, 4),
-            "combined_drop_rate_pct": round(combined_drop_pct, 4),
+            "seq_drop_rate_pct": round(seq_drop_pct, 4) if msg_count > 0 else None,
+            "combined_drop_rate_pct": round(combined_drop_pct, 4) if msg_count > 0 else None,
             "copy_amplification_ratio": round(copy_amp, 3)
             if copy_amp is not None
             else None,
             "zero_copy_status": zc_status,
-            "p99_latency_ms": round(p99_ms, 3),
-            "jitter_ms": round(jitter_ms, 3),
+            "p99_latency_ms": round(p99_ms, 3) if has_latency else None,
+            "jitter_ms": round(jitter_ms, 3) if has_latency else None,
         },
         "red_flags": red_flags,
     }

@@ -25,6 +25,7 @@ py_test(
     imports = [".."],
     deps = [
         "//cli:bench_lib",
+        "//cli:vanjee-10hz-bench",
         "//cli:wheelos-sensor-bench",
     ],
 )

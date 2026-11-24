@@ -44,6 +44,13 @@ def _read_text(path: Path) -> str | None:
 
 def collect_preflight(nic: str | None, bind_cores: list[int] | None) -> dict[str, Any]:
     """Capture host environment fingerprint before benchmarking."""
+    try:
+        os_version = platform.freedesktop_os_release().get("PRETTY_NAME")
+    except OSError:
+        os_version = None
+    board = _read_text(Path("/proc/device-tree/model"))
+    if board:
+        board = board.rstrip("\0")
     cpu_model = "unknown"
     cpuinfo = _read_text(Path("/proc/cpuinfo"))
     if cpuinfo:
@@ -72,6 +79,8 @@ def collect_preflight(nic: str | None, bind_cores: list[int] | None) -> dict[str
 
     return {
         "hostname": platform.node(),
+        "board": board,
+        "userspace_os": os_version,
         "kernel": platform.release(),
         "arch": platform.machine(),
         "cpu_model": cpu_model,

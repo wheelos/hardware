@@ -25,9 +25,29 @@ def render_markdown(items: list[dict[str, Any]]) -> str:
     lines = [
         "# WheelOS Driver Benchmark Report",
         "",
+    ]
+    for item in items:
+        preflight = item.get("preflight") or {}
+        target = item.get("target") or {}
+        channel = item.get("channel_metrics") or {}
+        cpu = (item.get("os_metrics") or {}).get("cpu") or {}
+        memory = (item.get("os_metrics") or {}).get("memory") or {}
+        latency = channel.get("driver_to_app_ms") or {}
+        valid_latency = ((item.get("evaluation") or {}).get("normalized") or {}).get("p99_latency_ms") is not None
+        lines.extend([
+            f"## {item.get('device', 'unknown')}",
+            "",
+            f"- Hardware: {preflight.get('board') or preflight.get('cpu_model') or 'N/A'}",
+            f"- Runtime OS: {preflight.get('userspace_os') or 'N/A'}; kernel: {preflight.get('kernel') or 'N/A'}",
+            f"- Driver version: {target.get('driver_version') or 'N/A'}",
+            f"- Warmup / measurement: {_fmt(target.get('warmup_sec'), ' s')} / {_fmt(target.get('duration_sec'), ' s')}",
+            f"- Output: {_fmt(channel.get('message_count'))} messages, {_fmt(channel.get('hz'), ' Hz')}, {_fmt(channel.get('mean_mbps'), ' Mbps')}; CPU peak: {_fmt(cpu.get('total_core_pct_peak'), '%')} of one core; RSS peak: {_fmt(memory.get('rss_mb_max'), ' MiB')}; latency P95 / max: {_fmt(latency.get('p95_ms') if valid_latency else None)} / {_fmt(latency.get('max_ms') if valid_latency else None)} ms",
+            "",
+        ])
+    lines.extend([
         "| Device | Score | CPU% (Mean) | CPU / 100Mbps | RSS (MB) | Copy Amp | Zero-Copy Status | P50 / P99 Latency (ms) | Drop% | NET_RX IRQ/s |",
         "| --- | ---: | ---: | ---: | ---: | ---: | --- | ---: | ---: | ---: |",
-    ]
+    ])
     for item in items:
         ev = item.get("evaluation", {})
         norm = ev.get("normalized", {})
@@ -37,7 +57,12 @@ def render_markdown(items: list[dict[str, Any]]) -> str:
         irq = (os_m.get("softirqs", {}) or {}).get("per_sec", {})
         chan = item.get("channel_metrics") or {}
         d2a = chan.get("driver_to_app_ms") or {}
-        lat_str = f"{_fmt(d2a.get('p50_ms'))} / {_fmt(d2a.get('p99_ms'))}"
+        score = ev.get("total_score")
+        score_str = f"{score:.1f}" if score is not None else "N/A"
+        lat_str = (
+            f"{_fmt(d2a.get('p50_ms'))} / {_fmt(d2a.get('p99_ms'))}"
+            if norm.get("p99_latency_ms") is not None else "N/A / N/A"
+        )
         copy_amp = (
             f"{norm['copy_amplification_ratio']:.2f}x"
             if norm.get("copy_amplification_ratio") is not None
@@ -45,7 +70,7 @@ def render_markdown(items: list[dict[str, Any]]) -> str:
         )
         lines.append(
             f"| {item.get('device', 'unknown')} | "
-            f"**{ev.get('total_score', 0.0):.1f}** | "
+            f"**{score_str}** | "
             f"{_fmt(cpu.get('total_core_pct_mean'), '%')} | "
             f"{_fmt(norm.get('cpu_per_100mbps'), '%')} | "
             f"{_fmt(mem.get('rss_mb_mean'))} | "
@@ -110,6 +135,30 @@ def _svg_bar_chart(
 
 
 def render_html(items: list[dict[str, Any]]) -> str:
+    environments = []
+    for item in items:
+        preflight = item.get("preflight") or {}
+        target = item.get("target") or {}
+        channel = item.get("channel_metrics") or {}
+        cpu = (item.get("os_metrics") or {}).get("cpu") or {}
+        memory = (item.get("os_metrics") or {}).get("memory") or {}
+        latency = channel.get("driver_to_app_ms") or {}
+        valid_latency = ((item.get("evaluation") or {}).get("normalized") or {}).get("p99_latency_ms") is not None
+        summary = (
+            f"{item.get('device', 'unknown')}: "
+            f"hardware={preflight.get('board') or preflight.get('cpu_model') or 'N/A'}; "
+            f"runtime OS={preflight.get('userspace_os') or 'N/A'}; "
+            f"kernel={preflight.get('kernel') or 'N/A'}; "
+            f"driver={target.get('driver_version') or 'N/A'}; "
+            f"warmup={_fmt(target.get('warmup_sec'), ' s')}; "
+            f"measurement={_fmt(target.get('duration_sec'), ' s')}; "
+            f"output={_fmt(channel.get('message_count'))} messages, {_fmt(channel.get('hz'), ' Hz')}; "
+            f"CPU peak={_fmt(cpu.get('total_core_pct_peak'), '%')} of one core; "
+            f"RSS peak={_fmt(memory.get('rss_mb_max'), ' MiB')}; "
+            f"latency P95/max={_fmt(latency.get('p95_ms') if valid_latency else None)}/"
+            f"{_fmt(latency.get('max_ms') if valid_latency else None)} ms"
+        )
+        environments.append(f"<li>{html.escape(summary)}</li>")
     score_rows = [
         (
             item.get("device", "unknown"),
@@ -117,6 +166,7 @@ def render_html(items: list[dict[str, Any]]) -> str:
             "#2563eb",
         )
         for item in items
+        if (item.get("evaluation") or {}).get("total_score") is not None
     ]
     cpu_rows = [
         (
@@ -138,12 +188,13 @@ def render_html(items: list[dict[str, Any]]) -> str:
             item.get("device", "unknown"),
             float(
                 ((item.get("evaluation") or {}).get("normalized") or {}).get(
-                    "p99_latency_ms", 0.0
+                    "p99_latency_ms"
                 )
             ),
             "#d97706",
         )
         for item in items
+        if ((item.get("evaluation") or {}).get("normalized") or {}).get("p99_latency_ms") is not None
     ]
 
     table_rows = []
@@ -156,6 +207,8 @@ def render_html(items: list[dict[str, Any]]) -> str:
         perf = item.get("perf_cache") or {}
         chan = item.get("channel_metrics") or {}
         d2a = chan.get("driver_to_app_ms") or {}
+        score = ev.get("total_score")
+        score_str = f"{score:.1f}" if score is not None else "N/A"
         flags = ev.get("red_flags") or []
         flag_html = (
             "<br/>".join(html.escape(f) for f in flags)
@@ -165,7 +218,7 @@ def render_html(items: list[dict[str, Any]]) -> str:
         table_rows.append(
             "<tr>"
             f"<td><strong>{html.escape(str(item.get('device', 'unknown')))}</strong></td>"
-            f"<td><strong>{ev.get('total_score', 0.0):.1f}</strong></td>"
+            f"<td><strong>{score_str}</strong></td>"
             f"<td>{_fmt(cpu.get('total_core_pct_mean'), '%')} "
             f"(u:{_fmt(cpu.get('user_core_pct_mean'))}/s:{_fmt(cpu.get('sys_core_pct_mean'))})</td>"
             f"<td>{_fmt(norm.get('cpu_per_100mbps'), '%')}</td>"
@@ -173,7 +226,7 @@ def render_html(items: list[dict[str, Any]]) -> str:
             f"<td>{_fmt(perf.get('cache_miss_rate_pct'), '%')}</td>"
             f"<td>{_fmt(norm.get('copy_amplification_ratio'), 'x')} ({html.escape(str(norm.get('zero_copy_status', 'N/A')))})</td>"
             f"<td>{_fmt(norm.get('effective_mbps'), ' Mbps')}</td>"
-            f"<td>{_fmt(d2a.get('p50_ms'))} / {_fmt(d2a.get('p99_ms'))} ms</td>"
+            f"<td>{_fmt(d2a.get('p50_ms') if norm.get('p99_latency_ms') is not None else None)} / {_fmt(d2a.get('p99_ms') if norm.get('p99_latency_ms') is not None else None)} ms</td>"
             f"<td>{_fmt(norm.get('combined_drop_rate_pct'), '%')}</td>"
             f"<td>{flag_html}</td>"
             "</tr>"
@@ -196,7 +249,8 @@ def render_html(items: list[dict[str, Any]]) -> str:
 </head>
 <body>
   <h1>WheelOS Driver Benchmark &amp; Selection Report</h1>
-  <div class="sub">Standardized CPU, Zero-Copy Memory, I/O Throughput, and End-to-End Latency Baseline</div>
+  <div class="sub">CPU, memory, I/O throughput, and header-to-callback latency baseline</div>
+  <ul>{''.join(environments)}</ul>
   <div class="charts">
     {_svg_bar_chart("Compute-Cost Composite Score (0-100, Higher is Better)", score_rows, 100.0)}
     {_svg_bar_chart("Normalized CPU% per 100 Mbps (Lower is Better)", cpu_rows)}

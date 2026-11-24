@@ -13,12 +13,24 @@
 // limitations under the License.
 
 #include "modules/drivers/benchmark/stats_accumulator.h"
+#include "modules/drivers/benchmark/arrival_sample.h"
 
 #include "gtest/gtest.h"
 
 namespace apollo {
 namespace drivers {
 namespace benchmark {
+
+TEST(StatsAccumulatorTest, CapturesArrivalBeforeExpensivePayloadSize) {
+  uint64_t now = 100;
+  const auto sample = CaptureArrival(
+      [&]() { return now; }, [&]() { return now + 1000; },
+      [&]() { now += 500; return 42; });
+  EXPECT_EQ(sample.monotonic_ns, 100U);
+  EXPECT_EQ(sample.realtime_ns, 1100U);
+  EXPECT_EQ(sample.payload_bytes, 42U);
+  EXPECT_EQ(now, 600U);
+}
 
 TEST(StatsAccumulatorTest, ComputesPercentilesDropsAndPeakWindow) {
   StatsAccumulator acc(100000000ULL);  // 100ms window

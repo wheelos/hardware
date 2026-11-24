@@ -9,8 +9,21 @@ py_library(
         "collectors.py",
         "report.py",
         "scoring.py",
+        "vanjee_packets.py",
     ],
     imports = [".."],
+)
+
+py_binary(
+    name = "vanjee-10hz-bench",
+    srcs = ["vanjee_10hz.py"],
+    data = [
+        "//probe:cyber_channel_probe",
+        "//probe:libwheelos_alloc_probe.so",
+    ],
+    imports = [".."],
+    main = "vanjee_10hz.py",
+    deps = [":bench_lib", ":wheelos-sensor-bench"],
 )
 
 py_binary(

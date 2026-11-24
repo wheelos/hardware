@@ -21,6 +21,11 @@ alias(
     actual = "//probe:libwheelos_alloc_probe.so",
 )
 
+alias(
+    name = "vanjee-10hz-bench",
+    actual = "//cli:vanjee-10hz-bench",
+)
+
 pkg_files(
     name = "package_files_binaries",
     srcs = [

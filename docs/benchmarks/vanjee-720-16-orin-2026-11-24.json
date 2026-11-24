@@ -1,0 +1,133 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-11-24T02:24:05.749683+00:00",
+  "device": "vanjee_720_16_live",
+  "target": {
+    "dag": null,
+    "cmd": null,
+    "pid": null,
+    "channel": null,
+    "msg_type": "pointcloud",
+    "warmup_sec": 20.0,
+    "duration_sec": 1800.0,
+    "driver_version": "hardware bb3d3e3028b60dac2bb88a2f3a63c52a6c520fcc; vanjee-lidar-sdk 2.2.9"
+  },
+  "preflight": {
+    "board": "NVIDIA Jetson AGX Orin Developer Kit",
+    "host_os": "Ubuntu 22.04.5 LTS",
+    "userspace_os": "Ubuntu 22.04.4 LTS",
+    "kernel": "5.15.148-tegra",
+    "arch": "aarch64",
+    "cpu_model": "ARMv8 Processor rev 1 (v8l)",
+    "cpu_count": 8,
+    "bind_cores": null,
+    "cpu_governor": "schedutil",
+    "perf_event_paranoid": 2,
+    "rmem_max_bytes": 40960000,
+    "nic": {
+      "name": "eth1",
+      "speed_mbps": 1000,
+      "mtu": 1500,
+      "operstate": "up"
+    }
+  },
+  "os_metrics": {
+    "elapsed_sec": 1800.014,
+    "cpu": {
+      "total_core_pct_mean": 10.86,
+      "total_core_pct_peak": 15.73,
+      "user_core_pct_mean": 7.6,
+      "sys_core_pct_mean": 3.25
+    },
+    "softirqs": {
+      "delta": {"NET_RX": 2461155, "NET_TX": 1048, "TIMER": 498740, "SCHED": 1704352},
+      "per_sec": {"NET_RX": 1367.3, "NET_TX": 0.58, "TIMER": 277.08, "SCHED": 946.85}
+    },
+    "memory": {
+      "rss_mb_mean": 52.21,
+      "rss_mb_max": 68.36,
+      "pss_mb_mean": 50.91,
+      "rss_drift_mb_per_min": -0.118,
+      "minflt_delta": 145654,
+      "majflt_delta": 0
+    },
+    "io": {
+      "nic": "eth1",
+      "nic_rx_mbps_mean": 10.432,
+      "nic_rx_mbps_peak": 13.866,
+      "nic_rx_packets": 1868907,
+      "nic_rx_dropped": 0,
+      "nic_drop_rate_pct": 0.0,
+      "udp_rcvbuf_drops_delta": 0
+    }
+  },
+  "perf_cache": {"available": false, "reason": "disabled by --no-perf"},
+  "alloc_probe": {
+    "available": true,
+    "measurement_window_aligned": true,
+    "large_copy_threshold_bytes": 4096,
+    "total_memcpy_calls": 12267544,
+    "total_memcpy_bytes": 48319318034,
+    "large_memcpy_calls": 490742,
+    "large_memcpy_bytes": 45456403529,
+    "memmove_calls": 781453,
+    "memmove_bytes": 23819170,
+    "heap_uordblks_delta_bytes": 893968,
+    "heap_mmap_delta_bytes": 0
+  },
+  "channel_metrics": {
+    "channel": null,
+    "msg_type": "pointcloud",
+    "latency_timestamp": "callback_entry",
+    "transport_mode": "ICEORYX",
+    "message_count": 18023,
+    "total_payload_bytes": 15055465520,
+    "dropped_sequence_count": 0,
+    "elapsed_sec": 1800.0,
+    "hz": 10.0128,
+    "mean_mbps": 66.9132,
+    "peak_window_mbps": 200.4835,
+    "driver_to_app_ms": {
+      "count": 18023, "mean_ms": 54.4822, "p50_ms": 48.5071,
+      "p95_ms": 86.0716, "p99_ms": 132.2845, "max_ms": 415.7573
+    },
+    "hw_to_driver_ms": {
+      "count": 18023, "mean_ms": 10.1946, "p50_ms": 9.4936,
+      "p95_ms": 13.7141, "p99_ms": 22.2654, "max_ms": 86.9281
+    }
+  },
+  "vanjee_packet_observation": {
+    "available": true,
+    "interface": "eth1",
+    "capture_socket_drops": 0,
+    "packets": 1802300,
+    "missing_sequence_estimate": 0,
+    "duplicates": 0,
+    "out_of_order": 0
+  },
+  "vanjee_run": {
+    "host_address": "192.168.10.3",
+    "lidar_address": "192.168.10.6",
+    "host_port": 3001,
+    "lidar_port": 3333,
+    "interface": "eth1",
+    "model": "vanjee_720_16",
+    "imu_enabled": true,
+    "use_lidar_clock": false
+  },
+  "provenance": {
+    "note": "Hardware, OS and driver version were supplemented after the run. Benchmark sources were uncommitted. Hostname, command paths, channel and thread IDs are omitted.",
+    "sha256": {
+      "component_binary": "4fc3b8f8dec3caecc7b0e7a219c1218c96668df6b90427b1f53d99cca9b99dae",
+      "mainboard_binary": "a214d08ad6b54805ff176a0f8801d4e1d8218924f265c26c9965cc753c759b00",
+      "benchmark/cli/collectors.py": "413cda05fec472300a1b192a3942d4141aabeecdd899b19a8350b31225d2a4cd",
+      "benchmark/cli/wheelos_sensor_bench.py": "c68cecc2d49a2e29db5e846719f59f5ca01c51e220d1bd1f9b37461e0e7f8804",
+      "benchmark/cli/vanjee_10hz.py": "472507ecc9874670eea5e63680750ae87fc32c702a4c9dd0cdf37d5b0ce2a1ec",
+      "benchmark/cli/vanjee_packets.py": "2eb8b1d9666014e2a321db09d7e5385f54c91ff5a05794d750bbd4ecd941a764",
+      "benchmark/probe/alloc_probe.c": "9766f667099fc72402d2d9d49e5bd0b6cf9fca8b3c8d7a2c126113f79aca7f51",
+      "benchmark/probe/arrival_sample.h": "72e24d1a0696f523a319c99e0099fcc7788cfe37a11d0f147af76edb7c5c3ef6",
+      "benchmark/probe/cyber_channel_probe.cc": "16c04bbbe3c42ad4a669bf36263299812081dcb9d9e635e2f6d93667b90906d3",
+      "benchmark/probe/stats_accumulator.h": "4783357ecb8d4185bbf3033de092c5f90f459269debe138333790563a9089d94"
+    }
+  }
+}
